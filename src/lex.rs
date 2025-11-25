@@ -272,44 +272,51 @@ mod tests {
     #[test]
     fn symbols() {
         let source = "+-*/(){};,.= == ! != < <= > >=";
-        let mut lexer = Lexer::new(source);
+        let expected = [
+            TokenKind::Plus,
+            TokenKind::Minus,
+            TokenKind::Star,
+            TokenKind::Slash,
+            TokenKind::LeftParen,
+            TokenKind::RightParen,
+            TokenKind::LeftBrace,
+            TokenKind::RightBrace,
+            TokenKind::Semi,
+            TokenKind::Comma,
+            TokenKind::Dot,
+            TokenKind::Eq,
+            TokenKind::EqEq,
+            TokenKind::Bang,
+            TokenKind::BangEq,
+            TokenKind::Less,
+            TokenKind::LessEq,
+            TokenKind::Greater,
+            TokenKind::GreaterEq,
+            TokenKind::Eoi,
+        ];
 
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Plus);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Minus);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Star);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Slash);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::LeftParen);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::RightParen);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::LeftBrace);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::RightBrace);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Semi);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Comma);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Dot);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Eq);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::EqEq);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Bang);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::BangEq);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Less);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::LessEq);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Greater);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::GreaterEq);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Eoi);
-        assert!(lexer.next().is_none());
+        let lexer = Lexer::new(source);
+        for (token, expected) in lexer.zip(expected) {
+            assert_eq!(token.unwrap().kind, expected);
+        }
     }
 
     #[test]
     fn keywords() {
         let source = "hello let fn for while if ";
-        let mut lexer = Lexer::new(source);
+        let expected = [
+            TokenKind::Identifier,
+            TokenKind::Let,
+            TokenKind::Fn,
+            TokenKind::For,
+            TokenKind::While,
+            TokenKind::If,
+            TokenKind::Eoi,
+        ];
 
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Identifier);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Let);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Fn);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::For);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::While);
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::If);
-
-        assert_eq!(lexer.scan_token().unwrap().kind, TokenKind::Eoi);
-        assert!(lexer.next().is_none());
+        let lexer = Lexer::new(source);
+        for (token, expected) in lexer.zip(expected) {
+            assert_eq!(token.unwrap().kind, expected);
+        }
     }
 }

@@ -19,5 +19,4 @@ let_decl : "let" ident "=" int ";"
 fn_decl : "fn" ident "(" ((ident ",")* ident)* ")" block
 
 block : decl*
-
 ```

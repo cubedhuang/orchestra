@@ -1,3 +1,5 @@
+use std::{iter::Peekable, str::CharIndices};
+
 use miette::{Diagnostic, SourceSpan};
 use phf::phf_map;
 use thiserror::Error;
@@ -68,7 +70,7 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token<'src> {
     kind: TokenKind,
-    lexeme: &'src [u8],
+    lexeme: &'src str,
     location: usize,
 }
 
@@ -76,7 +78,8 @@ pub struct Lexer<'src> {
     start: usize,
     current: usize,
     done: bool,
-    source: &'src [u8],
+    source: &'src str,
+    chars: Peekable<CharIndices<'src>>,
 }
 
 impl<'src> Iterator for Lexer<'src> {
@@ -97,7 +100,8 @@ impl<'src> Lexer<'src> {
             start: 0,
             current: 0,
             done: false,
-            source: source.as_bytes(),
+            source: source,
+            chars: source.char_indices().peekable(),
         }
     }
 
@@ -174,33 +178,32 @@ impl<'src> Lexer<'src> {
     }
 
     fn advance(&mut self) -> char {
-        self.current += 1;
-        self.source[self.current - 1] as char
+        if let Some((idx, ch)) = self.chars.next() {
+            self.current = idx + ch.len_utf8();
+            ch
+        } else {
+            '\0'
+        }
     }
 
     fn matches(&mut self, expected: char) -> bool {
-        if self.is_at_end() || expected != self.source[self.current] as char {
-            false
-        } else {
-            self.current += 1;
-            true
+        if let Some(&(_, ch)) = self.chars.peek() {
+            if ch == expected {
+                self.advance();
+                return true;
+            }
         }
+        false
     }
 
-    fn peek(&self) -> char {
-        if self.is_at_end() {
-            '\0'
-        } else {
-            self.source[self.current] as char
-        }
+    fn peek(&mut self) -> char {
+        self.chars.peek().map(|&(_, ch)| ch).unwrap_or('\0')
     }
 
-    fn peek_next(&self) -> char {
-        if self.current + 1 >= self.source.len() {
-            '\0'
-        } else {
-            self.source[self.current + 1] as char
-        }
+    fn peek_next(&mut self) -> char {
+        let mut iter = self.source[self.current..].chars();
+        iter.next();
+        iter.next().unwrap_or('\0')
     }
 
     fn skip_whitespace(&mut self) {
@@ -251,17 +254,17 @@ impl<'src> Lexer<'src> {
             self.advance();
         }
 
-        let lexeme = unsafe { str::from_utf8_unchecked(&self.source[self.start..self.current]) };
+        let lexeme = &self.source[self.start..self.current];
         let kind = KEYWORDS
             .get(lexeme)
-            .map(|l| l.clone())
+            .copied()
             .unwrap_or(TokenKind::Identifier);
 
         Ok(self.make_token(kind))
     }
 
-    fn is_at_end(&self) -> bool {
-        self.current >= self.source.len()
+    fn is_at_end(&mut self) -> bool {
+        self.chars.peek().is_none()
     }
 }
 

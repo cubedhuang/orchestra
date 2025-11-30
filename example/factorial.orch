@@ -1,0 +1,26 @@
+let global;
+
+fn main() {
+    global = factorial(5);
+}
+
+fn factorial(n) {
+    let result = 1;
+
+    while (n > 0) {
+        result = times(result, n);
+
+        n = n - 1;
+    }
+
+    return result;
+}
+
+fn times(a, b) {
+    let result = 0;
+    while (b > 0) {
+        result = result + a;
+        b = b - 1;
+    }
+    return result;
+}

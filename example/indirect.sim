@@ -74,8 +74,7 @@ fn_main
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; SetLocal(0)
-  ADD R6, R6, #1
-  LDR R0, R6, #-1
+  LDR R0, R6, #0
   STR R0, R5, #0
   ;; GetLocalAddress(0)
   ADD R0, R5, #0
@@ -91,8 +90,7 @@ fn_main
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; SetGlobal(0)
-  ADD R6, R6, #1
-  LDR R0, R6, #-1
+  LDR R0, R6, #0
   STR R0, R4, #0
   ;; Pop
   ADD R6, R6, #1

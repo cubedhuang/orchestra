@@ -201,8 +201,8 @@ impl LC3Backend {
             }
 
             Op::LogicalNot => {
-                let true_label = self.fresh_label("not_true");
-                let end_label = self.fresh_label("not_end");
+                let true_label = self.fresh_label(&function.name, "not_true");
+                let end_label = self.fresh_label(&function.name, "not_end");
                 self.pop("R0");
                 // cc is set
                 self.writeln(&format!("  BRz {true_label}"));
@@ -224,22 +224,22 @@ impl LC3Backend {
             }
 
             Op::Equal => {
-                self.emit_comparison("np");
+                self.emit_comparison(&function.name, "np");
             }
             Op::NotEqual => {
-                self.emit_comparison("z");
+                self.emit_comparison(&function.name, "z");
             }
             Op::LessThan => {
-                self.emit_comparison("zp");
+                self.emit_comparison(&function.name, "zp");
             }
             Op::LessEqual => {
-                self.emit_comparison("p");
+                self.emit_comparison(&function.name, "p");
             }
             Op::GreaterThan => {
-                self.emit_comparison("nz");
+                self.emit_comparison(&function.name, "nz");
             }
             Op::GreaterEqual => {
-                self.emit_comparison("n");
+                self.emit_comparison(&function.name, "n");
             }
 
             Op::StoreIndirect => {
@@ -279,7 +279,7 @@ impl LC3Backend {
         }
     }
 
-    fn emit_comparison(&mut self, branch_false: &str) {
+    fn emit_comparison(&mut self, name: &str, branch_false: &str) {
         self.pop("R1"); // right
         self.pop("R0"); // left
 
@@ -287,8 +287,8 @@ impl LC3Backend {
         self.writeln("  ADD R1, R1, #1");
         self.writeln("  ADD R0, R0, R1");
 
-        let false_label = self.fresh_label("COMP_FALSE");
-        let end_label = self.fresh_label("COMP_END");
+        let false_label = self.fresh_label(name, "comp_false");
+        let end_label = self.fresh_label(name, "comp_end");
 
         self.writeln(&format!("  BR{branch_false} {false_label}"));
         // true
@@ -376,8 +376,8 @@ impl LC3Backend {
         }
     }
 
-    fn fresh_label(&mut self, prefix: &str) -> String {
-        let label = format!("{prefix}_{}", self.label_counter);
+    fn fresh_label(&mut self, function_name: &str, description: &str) -> String {
+        let label = format!("fn_{function_name}_{description}_{}", self.label_counter);
         self.label_counter += 1;
         label
     }

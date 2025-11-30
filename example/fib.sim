@@ -31,13 +31,13 @@ fn_fib
   NOT R1, R1
   ADD R1, R1, #1
   ADD R0, R0, R1
-  BRp COMP_FALSE_0
+  BRp fn_fib_comp_false_0
   AND R0, R0, #0
   ADD R0, R0, #1
-  BR COMP_END_1
-COMP_FALSE_0
+  BR fn_fib_comp_end_1
+fn_fib_comp_false_0
   AND R0, R0, #0
-COMP_END_1
+fn_fib_comp_end_1
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; JumpIfZero(0)
@@ -142,8 +142,7 @@ fn_main
   ;; Call(fib)
   JSR fn_fib
   ;; SetGlobal(0)
-  ADD R6, R6, #1
-  LDR R0, R6, #-1
+  LDR R0, R6, #0
   STR R0, R4, #0
   ;; Pop
   ADD R6, R6, #1

@@ -47,13 +47,13 @@ fn_main_label_0
   NOT R1, R1
   ADD R1, R1, #1
   ADD R0, R0, R1
-  BRnz COMP_FALSE_0
+  BRnz fn_main_comp_false_0
   AND R0, R0, #0
   ADD R0, R0, #1
-  BR COMP_END_1
-COMP_FALSE_0
+  BR fn_main_comp_end_1
+fn_main_comp_false_0
   AND R0, R0, #0
-COMP_END_1
+fn_main_comp_end_1
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; JumpIfZero(1)

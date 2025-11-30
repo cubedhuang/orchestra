@@ -6,8 +6,8 @@
   HALT
 stack_base  .fill xF000
 globals
-  .fill 0
-  .fill 0
+  .fill 6
+  .fill 7
 fn_main
   ADD R6, R6, #-1
   ADD R6, R6, #-1
@@ -15,49 +15,13 @@ fn_main
   ADD R6, R6, #-1
   STR R5, R6, #0
   ADD R5, R6, #-1
-  ADD R6, R6, #-2
-  ;; Push(7)
-  AND R0, R0, #0
-  ADD R0, R0, #7
   ADD R6, R6, #-1
-  STR R0, R6, #0
-  ;; SetLocal(0)
-  LDR R0, R6, #0
-  STR R0, R5, #0
-  ;; Push(5)
-  AND R0, R0, #0
-  ADD R0, R0, #5
-  ADD R6, R6, #-1
-  STR R0, R6, #0
-  ;; SetLocal(1)
-  LDR R0, R6, #0
-  STR R0, R5, #-1
-  ;; GetLocalAddress(0)
-  ADD R0, R5, #0
+  ;; GetGlobalAddress(0)
+  ADD R0, R4, #0
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; Call(spooky)
   JSR fn_spooky
-  ;; Pop
-  ADD R6, R6, #1
-  LDR R0, R6, #-1
-  ;; GetLocal(0)
-  LDR R0, R5, #0
-  ADD R6, R6, #-1
-  STR R0, R6, #0
-  ;; SetGlobal(0)
-  LDR R0, R6, #0
-  STR R0, R4, #0
-  ;; Pop
-  ADD R6, R6, #1
-  LDR R0, R6, #-1
-  ;; GetLocal(1)
-  LDR R0, R5, #-1
-  ADD R6, R6, #-1
-  STR R0, R6, #0
-  ;; SetGlobal(1)
-  LDR R0, R6, #0
-  STR R0, R4, #1
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -85,19 +49,17 @@ fn_spooky
   ADD R0, R0, #1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Subtract
-  ADD R6, R6, #1
-  LDR R1, R6, #-1
+  ;; Add
   ADD R6, R6, #1
   LDR R0, R6, #-1
-  NOT R1, R1
-  ADD R1, R1, #1
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
   ADD R0, R0, R1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Push(2)
+  ;; Push(9)
   AND R0, R0, #0
-  ADD R0, R0, #2
+  ADD R0, R0, #9
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; StoreIndirect

@@ -1,14 +1,11 @@
-fn fibonacci(n) {
-  if (n <= 1) return 1;
-  else {
-    let a = fibonacci(n - 1);
-    let b = fibonacci(n - 2);
-    return a + b;
-  }
-}
-
-let input = 10;
+let global;
 
 fn main() {
-  let a = fibonacci(input);
+	let a = 5;
+	addfive(&a);
+	global = a;
+}
+
+fn addfive(ptr) {
+	ptr @= @ptr + 5;
 }

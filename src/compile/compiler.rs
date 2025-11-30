@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::{
     ast::{
@@ -24,14 +24,14 @@ struct FunctionCompiler {
     max_locals: usize,
     code: Vec<Op>,
 
-    scopes: Vec<HashMap<String, usize>>,
+    scopes: Vec<BTreeMap<String, usize>>,
     current_locals: usize,
     next_label: usize,
 }
 
 impl FunctionCompiler {
     fn new(name: String, parameters: Vec<String>) -> Self {
-        let mut param_map = HashMap::new();
+        let mut param_map = BTreeMap::new();
         for (i, param) in parameters.iter().enumerate() {
             param_map.insert(param.clone(), i);
         }
@@ -94,8 +94,8 @@ impl FunctionCompiler {
 
 pub struct Compiler {
     globals: Vec<isize>,
-    global_map: HashMap<String, usize>,
-    functions: HashMap<String, Function>,
+    global_map: BTreeMap<String, usize>,
+    functions: BTreeMap<String, Function>,
     current_function: FunctionCompiler,
 }
 
@@ -103,8 +103,8 @@ impl Compiler {
     pub fn new() -> Self {
         Self {
             globals: Vec::new(),
-            global_map: HashMap::new(),
-            functions: HashMap::new(),
+            global_map: BTreeMap::new(),
+            functions: BTreeMap::new(),
             current_function: FunctionCompiler::default(),
         }
     }
@@ -313,6 +313,12 @@ impl Compiler {
                     Ok(())
                 }
             },
+            Expression::StoreIndirect { target, value } => {
+                self.expression(&target.node)?;
+                self.expression(&value.node)?;
+                self.emit(Op::StoreIndirect);
+                Ok(())
+            }
             Expression::Logical { left, op, right } => match op {
                 LogicalOp::And => {
                     let label = self.next_label();
@@ -429,7 +435,7 @@ impl Compiler {
     }
 
     fn begin_scope(&mut self) {
-        self.current_function.scopes.push(HashMap::new());
+        self.current_function.scopes.push(BTreeMap::new());
     }
 
     fn end_scope(&mut self) {

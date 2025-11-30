@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::BTreeMap, fmt::Display};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Op {
@@ -24,6 +24,7 @@ pub enum Op {
     LessEqual,
     GreaterThan,
     GreaterEqual,
+    StoreIndirect,
 
     // unary
     Negate,
@@ -64,6 +65,7 @@ impl Display for Op {
             Op::LessEqual => write!(f, "LessEqual"),
             Op::GreaterThan => write!(f, "GreaterThan"),
             Op::GreaterEqual => write!(f, "GreaterEqual"),
+            Op::StoreIndirect => write!(f, "StoreIndirect"),
             Op::Negate => write!(f, "Negate"),
             Op::LogicalNot => write!(f, "LogicalNot"),
             Op::Dereference => write!(f, "Dereference"),
@@ -102,7 +104,7 @@ impl Display for Function {
 #[derive(Debug)]
 pub struct IR {
     pub globals: Vec<isize>,
-    pub functions: HashMap<String, Function>,
+    pub functions: BTreeMap<String, Function>,
 }
 
 impl Display for IR {

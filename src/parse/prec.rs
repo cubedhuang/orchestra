@@ -36,7 +36,7 @@ impl Precedence {
 impl From<TokenKind> for Precedence {
     fn from(value: TokenKind) -> Self {
         match value {
-            TokenKind::Eq => Precedence::Assignment,
+            TokenKind::Eq | TokenKind::AtEq => Precedence::Assignment,
             TokenKind::Or => Precedence::LogicalOr,
             TokenKind::And => Precedence::LogicalAnd,
             TokenKind::EqEq | TokenKind::BangEq => Precedence::Equality,

@@ -52,10 +52,6 @@ impl LC3Backend {
     }
 
     fn emit_globals(&mut self, globals: &[isize]) {
-        if globals.is_empty() {
-            return;
-        }
-
         self.writeln("globals");
         for value in globals {
             self.writeln(&format!("  .fill {value}"));
@@ -63,7 +59,7 @@ impl LC3Backend {
     }
 
     fn emit_function(&mut self, function: &Function) {
-        self.writeln(&format!("fn_{}:", function.name));
+        self.writeln(&format!("fn_{}", function.name));
 
         self.emit_buildup(function);
 
@@ -244,6 +240,13 @@ impl LC3Backend {
             }
             Op::GreaterEqual => {
                 self.emit_comparison("n");
+            }
+
+            Op::StoreIndirect => {
+                self.pop("R1"); // value
+                self.pop("R0"); // address
+                self.writeln("  STR R1, R0, #0");
+                self.push("R1"); // put value back on for future assignments
             }
 
             Op::Label(id) => {

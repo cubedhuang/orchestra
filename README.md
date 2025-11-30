@@ -2,6 +2,8 @@
 
 Orchestra is a programming language designed to compile to LC3 Assembly.
 
+The language is untyped. Pointer dereferencing is accomplished with `@ptr`, and assignment is done with the `@=` operator.
+
 # syntax
 
 ```
@@ -39,6 +41,7 @@ expression : assignment
 
 assignment :
     | identifier '=' assignment
+    | logical '@=' assignment
     | logical
 
 logical :
@@ -61,7 +64,7 @@ factors :
     | unary
 
 unary :
-    | ('!' | '-' | '*') unary
+    | ('!' | '-' | '@') unary
     | primary
 
 primary :

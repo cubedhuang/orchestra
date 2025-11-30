@@ -197,6 +197,10 @@ pub enum Expression<'src> {
         target: Identifier<'src>,
         value: Box<Spanned<Expression<'src>>>,
     },
+    StoreIndirect {
+        target: Box<Spanned<Expression<'src>>>,
+        value: Box<Spanned<Expression<'src>>>,
+    },
     Logical {
         left: Box<Spanned<Expression<'src>>>,
         op: LogicalOp,
@@ -225,6 +229,7 @@ impl Display for Expression<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::Assign { target, value } => write!(f, "({target} = {value})"),
+            Expression::StoreIndirect { target, value } => write!(f, "({target} @= {value})"),
             Expression::Logical { left, op, right } => write!(f, "({left} {op} {right})"),
             Expression::Binary { left, op, right } => write!(f, "({left} {op} {right})"),
             Expression::Unary { op, right } => write!(f, "({op} {right})"),
@@ -294,7 +299,7 @@ impl Display for UnaryOp {
         match self {
             UnaryOp::Negate => write!(f, "-"),
             UnaryOp::LogicalNot => write!(f, "!"),
-            UnaryOp::Dereference => write!(f, "*"),
+            UnaryOp::Dereference => write!(f, "@"),
         }
     }
 }

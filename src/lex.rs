@@ -30,6 +30,8 @@ pub enum TokenKind {
     Star,
     Slash,
     Ampersand,
+    At,
+    AtEq,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -74,7 +76,9 @@ impl Display for TokenKind {
             TokenKind::Minus => write!(f, "'-'"),
             TokenKind::Star => write!(f, "'*'"),
             TokenKind::Slash => write!(f, "'/'"),
-            TokenKind::Ampersand => write!(f, "'/'"),
+            TokenKind::Ampersand => write!(f, "'&'"),
+            TokenKind::At => write!(f, "'@'"),
+            TokenKind::AtEq => write!(f, "'@='"),
             TokenKind::LeftParen => write!(f, "'('"),
             TokenKind::RightParen => write!(f, "')'"),
             TokenKind::LeftBrace => write!(f, "'{{'"),
@@ -197,6 +201,14 @@ impl<'src> Lexer<'src> {
             '/' => Ok(self.make_token(TokenKind::Slash)),
             '*' => Ok(self.make_token(TokenKind::Star)),
             '&' => Ok(self.make_token(TokenKind::Ampersand)),
+            '@' => {
+                let kind = if self.matches('=') {
+                    TokenKind::AtEq
+                } else {
+                    TokenKind::At
+                };
+                Ok(self.make_token(kind))
+            }
             '!' => {
                 let kind = if self.matches('=') {
                     TokenKind::BangEq

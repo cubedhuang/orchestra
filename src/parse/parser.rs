@@ -236,6 +236,7 @@ impl<'src> Parser<'src> {
         self.advance()?;
         match self.previous.kind {
             TokenKind::Eq => self.assignment(left),
+            TokenKind::AtEq => self.store_indirect(left),
             TokenKind::And | TokenKind::Or => self.logical(left),
             TokenKind::EqEq
             | TokenKind::BangEq
@@ -269,6 +270,21 @@ impl<'src> Parser<'src> {
             }
             _ => Err(SyntaxError::InvalidAssignmentTarget { span: left.span }.into()),
         }
+    }
+
+    fn store_indirect(
+        &mut self,
+        left: Spanned<Expression<'src>>,
+    ) -> Result<Spanned<Expression<'src>>> {
+        let right = self.parse_precedence(Precedence::Assignment)?;
+        let span = Self::combine_spans(left.span, right.span);
+        Ok(Spanned::new(
+            Expression::StoreIndirect {
+                target: Box::new(left),
+                value: Box::new(right),
+            },
+            span,
+        ))
     }
 
     fn logical(&mut self, left: Spanned<Expression<'src>>) -> Result<Spanned<Expression<'src>>> {
@@ -341,7 +357,7 @@ impl<'src> Parser<'src> {
     fn prefix(&mut self) -> Result<Spanned<Expression<'src>>> {
         self.advance()?;
         match self.previous.kind {
-            TokenKind::Minus | TokenKind::Bang | TokenKind::Star => self.unary(),
+            TokenKind::Minus | TokenKind::Bang | TokenKind::At => self.unary(),
             TokenKind::Number => self.number(),
             TokenKind::Identifier => self.identifier(),
             TokenKind::Ampersand => self.address(),
@@ -364,7 +380,7 @@ impl<'src> Parser<'src> {
                 op: match op {
                     TokenKind::Minus => UnaryOp::Negate,
                     TokenKind::Bang => UnaryOp::LogicalNot,
-                    TokenKind::Star => UnaryOp::Dereference,
+                    TokenKind::At => UnaryOp::Dereference,
                     _ => unreachable!(),
                 },
                 right: Box::new(right),

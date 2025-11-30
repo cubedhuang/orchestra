@@ -324,7 +324,8 @@ impl<'src> Lexer<'src> {
     }
 
     fn number(&mut self) -> Result<Token<'src>, LexError> {
-        while self.peek().is_ascii_digit() {
+        // parse extra so that they can be correctly discarded later
+        while self.peek().is_ascii_alphanumeric() {
             self.advance();
         }
 
@@ -403,6 +404,28 @@ mod tests {
         let lexer = Lexer::new(source);
         for (token, expected) in lexer.zip(expected) {
             assert_eq!(token.unwrap().kind, expected);
+        }
+    }
+
+    #[test]
+    fn number_literals() {
+        let source = "42 0xFF 0b1010 0o77 0x1a3 0B101 0O644";
+        let expected = [
+            ("42", TokenKind::Number),
+            ("0xFF", TokenKind::Number),
+            ("0b1010", TokenKind::Number),
+            ("0o77", TokenKind::Number),
+            ("0x1a3", TokenKind::Number),
+            ("0B101", TokenKind::Number),
+            ("0O644", TokenKind::Number),
+            ("", TokenKind::Eoi),
+        ];
+
+        let lexer = Lexer::new(source);
+        for (token, (expected_lexeme, expected_kind)) in lexer.zip(expected) {
+            let token = token.unwrap();
+            assert_eq!(token.kind, expected_kind);
+            assert_eq!(token.lexeme, expected_lexeme);
         }
     }
 }

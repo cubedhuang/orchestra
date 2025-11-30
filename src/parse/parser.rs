@@ -89,17 +89,12 @@ impl<'src> Parser<'src> {
         let start = self.previous.span;
         self.consume(TokenKind::Identifier, "in global variable declaration")?;
         let name = self.previous.into();
-        let value =
-            if self.matches(TokenKind::Eq)? {
-                self.consume(TokenKind::Number, "as global variable value")?;
-                Some(self.previous.lexeme.parse::<isize>().map_err(|_| {
-                    SyntaxError::InvalidNumber {
-                        span: self.previous.span,
-                    }
-                })?)
-            } else {
-                None
-            };
+        let value = if self.matches(TokenKind::Eq)? {
+            self.consume(TokenKind::Number, "as global variable value")?;
+            Some(self.parse_number(self.previous.lexeme, self.previous.span)?)
+        } else {
+            None
+        };
         self.consume(TokenKind::Semi, "after global variable declaration")?;
 
         Ok(Spanned::new(
@@ -391,11 +386,29 @@ impl<'src> Parser<'src> {
 
     fn number(&mut self) -> Result<Spanned<Expression<'src>>> {
         let span = self.previous.span;
-        self.previous
-            .lexeme
-            .parse::<isize>()
-            .map(|value| Spanned::new(Expression::Integer(value), span))
-            .map_err(|_| SyntaxError::InvalidNumber { span }.into())
+        let value = self.parse_number(self.previous.lexeme, span)?;
+        Ok(Spanned::new(Expression::Integer(value), span))
+    }
+
+    fn parse_number(&self, lexeme: &str, span: SourceSpan) -> Result<isize> {
+        if lexeme.starts_with("0x") || lexeme.starts_with("0X") {
+            // Hexadecimal
+            isize::from_str_radix(&lexeme[2..], 16)
+                .map_err(|_| SyntaxError::InvalidNumber { span }.into())
+        } else if lexeme.starts_with("0b") || lexeme.starts_with("0B") {
+            // Binary
+            isize::from_str_radix(&lexeme[2..], 2)
+                .map_err(|_| SyntaxError::InvalidNumber { span }.into())
+        } else if lexeme.starts_with("0o") || lexeme.starts_with("0O") {
+            // Octal
+            isize::from_str_radix(&lexeme[2..], 8)
+                .map_err(|_| SyntaxError::InvalidNumber { span }.into())
+        } else {
+            // Decimal
+            lexeme
+                .parse::<isize>()
+                .map_err(|_| SyntaxError::InvalidNumber { span }.into())
+        }
     }
 
     fn identifier(&mut self) -> Result<Spanned<Expression<'src>>> {

@@ -1,0 +1,11 @@
+fn main() {
+    let array = 0x4000;
+    let length = 10;
+
+    while (length > 0) {
+        length = length - 1;
+
+        array @= length;
+        array = array + 1;
+    }
+}

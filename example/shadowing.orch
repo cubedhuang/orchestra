@@ -1,0 +1,28 @@
+let array = 0x4000;
+let x = 1;
+
+fn main() {
+    // expected output: 1, 2, 3, 2, 4, 2, 1
+
+    {
+        push(x);
+        let x = 2;
+        push(x);
+        {
+            let x = 3;
+            push(x);
+        }
+        {
+            push(x);
+            let x = 4;
+            push(x);
+        }
+        push(x);
+    }
+    push(x);
+}
+
+fn push(value) {
+    array @= value;
+    array = array + 1;
+}

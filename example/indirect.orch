@@ -2,10 +2,10 @@ let global;
 
 fn main() {
 	let a = 5;
-	addfive(&a);
+	addFive(&a);
 	global = a;
 }
 
-fn addfive(ptr) {
+fn addFive(ptr) {
 	ptr @= @ptr + 5;
 }

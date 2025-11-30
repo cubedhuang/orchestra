@@ -7,7 +7,7 @@
 stack_base  .fill xF000
 globals
   .fill 0
-fn_addfive
+fn_addFive
   ADD R6, R6, #-1
   ADD R6, R6, #-1
   STR R7, R6, #0
@@ -53,7 +53,7 @@ fn_addfive
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
-fn_addfive_teardown
+fn_addFive_teardown
   ADD R6, R5, #1
   LDR R5, R6, #0
   ADD R6, R6, #1
@@ -81,8 +81,8 @@ fn_main
   ADD R0, R5, #0
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(addfive)
-  JSR fn_addfive
+  ;; Call(addFive)
+  JSR fn_addFive
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1

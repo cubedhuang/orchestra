@@ -345,6 +345,9 @@ impl Compiler {
                 self.emit(match op {
                     BinaryOp::Add => Op::Add,
                     BinaryOp::Subtract => Op::Subtract,
+                    BinaryOp::BitwiseOr => Op::BitwiseOr,
+                    BinaryOp::BitwiseXor => Op::BitwiseXor,
+                    BinaryOp::BitwiseAnd => Op::BitwiseAnd,
                     BinaryOp::Equal => Op::Equal,
                     BinaryOp::NotEqual => Op::NotEqual,
                     BinaryOp::LessThan => Op::LessThan,
@@ -359,6 +362,7 @@ impl Compiler {
                 self.emit(match op {
                     UnaryOp::Negate => Op::Negate,
                     UnaryOp::LogicalNot => Op::LogicalNot,
+                    UnaryOp::BitwiseNot => Op::BitwiseNot,
                     UnaryOp::Dereference => Op::Dereference,
                 });
                 Ok(())

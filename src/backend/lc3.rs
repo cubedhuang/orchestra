@@ -193,6 +193,34 @@ impl LC3Backend {
                 self.push("R0");
             }
 
+            Op::BitwiseOr => {
+                self.pop("R0");
+                self.pop("R1");
+                self.writeln("  NOT R0, R0");
+                self.writeln("  NOT R1, R1");
+                self.writeln("  AND R0, R0, R1");
+                self.writeln("  NOT R0, R0");
+                self.push("R0");
+            }
+
+            Op::BitwiseXor => {
+                self.pop("R0");
+                self.pop("R1");
+                self.writeln("  NOT R2, R0");
+                self.writeln("  AND R2, R2, R1");
+                self.writeln("  NOT R3, R1");
+                self.writeln("  AND R3, R3, R0");
+                self.writeln("  ADD R0, R2, R3");
+                self.push("R0");
+            }
+
+            Op::BitwiseAnd => {
+                self.pop("R0");
+                self.pop("R1");
+                self.writeln("  AND R0, R0, R1");
+                self.push("R0");
+            }
+
             Op::Negate => {
                 self.pop("R0");
                 self.writeln("  NOT R0, R0");
@@ -214,6 +242,12 @@ impl LC3Backend {
                 self.writeln("  AND R0, R0, #0");
                 self.writeln("  ADD R0, R0, #1");
                 self.writeln(&end_label);
+                self.push("R0");
+            }
+
+            Op::BitwiseNot => {
+                self.pop("R0");
+                self.writeln("  NOT R0, R0");
                 self.push("R0");
             }
 

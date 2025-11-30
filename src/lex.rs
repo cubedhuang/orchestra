@@ -30,6 +30,9 @@ pub enum TokenKind {
     Star,
     Slash,
     Ampersand,
+    Pipe,
+    Caret,
+    Tilde,
     At,
     AtEq,
     LeftParen,
@@ -77,6 +80,9 @@ impl Display for TokenKind {
             TokenKind::Star => write!(f, "'*'"),
             TokenKind::Slash => write!(f, "'/'"),
             TokenKind::Ampersand => write!(f, "'&'"),
+            TokenKind::Pipe => write!(f, "'|'"),
+            TokenKind::Caret => write!(f, "'^'"),
+            TokenKind::Tilde => write!(f, "'~'"),
             TokenKind::At => write!(f, "'@'"),
             TokenKind::AtEq => write!(f, "'@='"),
             TokenKind::LeftParen => write!(f, "'('"),
@@ -201,6 +207,9 @@ impl<'src> Lexer<'src> {
             '/' => Ok(self.make_token(TokenKind::Slash)),
             '*' => Ok(self.make_token(TokenKind::Star)),
             '&' => Ok(self.make_token(TokenKind::Ampersand)),
+            '|' => Ok(self.make_token(TokenKind::Pipe)),
+            '^' => Ok(self.make_token(TokenKind::Caret)),
+            '~' => Ok(self.make_token(TokenKind::Tilde)),
             '@' => {
                 let kind = if self.matches('=') {
                     TokenKind::AtEq
@@ -357,12 +366,15 @@ mod tests {
 
     #[test]
     fn symbols() {
-        let source = "+-*&/(){};,.= == ! != < <= > >=";
+        let source = "+-*&|^/(){};,.= == ! != < <= > >=";
         let expected = [
             TokenKind::Plus,
             TokenKind::Minus,
             TokenKind::Star,
             TokenKind::Ampersand,
+            TokenKind::Pipe,
+            TokenKind::Caret,
+            TokenKind::Tilde,
             TokenKind::Slash,
             TokenKind::LeftParen,
             TokenKind::RightParen,

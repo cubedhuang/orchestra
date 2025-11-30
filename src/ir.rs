@@ -18,6 +18,9 @@ pub enum Op {
     // binary
     Add,
     Subtract,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseAnd,
     Equal,
     NotEqual,
     LessThan,
@@ -29,6 +32,7 @@ pub enum Op {
     // unary
     Negate,
     LogicalNot,
+    BitwiseNot,
     Dereference,
 
     // control flow
@@ -59,6 +63,9 @@ impl Display for Op {
             Op::SetGlobal(index) => write!(f, "SetGlobal({index})"),
             Op::Add => write!(f, "Add"),
             Op::Subtract => write!(f, "Subtract"),
+            Op::BitwiseOr => write!(f, "BitwiseOr"),
+            Op::BitwiseXor => write!(f, "BitwiseXor"),
+            Op::BitwiseAnd => write!(f, "BitwiseAnd"),
             Op::Equal => write!(f, "Equal"),
             Op::NotEqual => write!(f, "NotEqual"),
             Op::LessThan => write!(f, "LessThan"),
@@ -68,6 +75,7 @@ impl Display for Op {
             Op::StoreIndirect => write!(f, "StoreIndirect"),
             Op::Negate => write!(f, "Negate"),
             Op::LogicalNot => write!(f, "LogicalNot"),
+            Op::BitwiseNot => write!(f, "BitwiseNot"),
             Op::Dereference => write!(f, "Dereference"),
             Op::Label(index) => write!(f, "Label({index})"),
             Op::Jump(index) => write!(f, "Jump({index})"),

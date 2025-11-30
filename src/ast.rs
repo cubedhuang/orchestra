@@ -263,6 +263,10 @@ pub enum BinaryOp {
     Add,
     Subtract,
 
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseAnd,
+
     Equal,
     NotEqual,
     LessThan,
@@ -276,6 +280,9 @@ impl Display for BinaryOp {
         match self {
             BinaryOp::Add => write!(f, "+"),
             BinaryOp::Subtract => write!(f, "-"),
+            BinaryOp::BitwiseOr => write!(f, "|"),
+            BinaryOp::BitwiseXor => write!(f, "^"),
+            BinaryOp::BitwiseAnd => write!(f, "&"),
 
             BinaryOp::Equal => write!(f, "=="),
             BinaryOp::NotEqual => write!(f, "!="),
@@ -291,6 +298,7 @@ impl Display for BinaryOp {
 pub enum UnaryOp {
     Negate,
     LogicalNot,
+    BitwiseNot,
     Dereference,
 }
 
@@ -299,6 +307,7 @@ impl Display for UnaryOp {
         match self {
             UnaryOp::Negate => write!(f, "-"),
             UnaryOp::LogicalNot => write!(f, "!"),
+            UnaryOp::BitwiseNot => write!(f, "~"),
             UnaryOp::Dereference => write!(f, "@"),
         }
     }

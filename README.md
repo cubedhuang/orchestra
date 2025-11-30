@@ -6,6 +6,8 @@ The language is untyped. Pointer dereferencing is accomplished with `@ptr`, and 
 
 # syntax
 
+Note: bitwise operations
+
 ```
 program : global_declaration*
 
@@ -48,6 +50,18 @@ logical :
     | logical ('and' | 'or') comparison
     | comparison
 
+bitwise_or :
+    | bitwise_or '|' bitwise_xor
+    | bitwise_xor
+
+bitwise_xor :
+    | bitwise_xor '^' bitwise_and
+    | bitwise_and
+
+bitwise_and :
+    | bitwise_and '&' comparison
+    | comparison
+
 equality :
     | equality ('==' | '!=') comparison
     | comparison
@@ -64,7 +78,7 @@ factors :
     | unary
 
 unary :
-    | ('!' | '-' | '@') unary
+    | ('!' | '-' | '~' | '@') unary
     | primary
 
 primary :

@@ -3,14 +3,17 @@ use crate::lex::TokenKind;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
     None,
-    Assignment, // =
+    Assignment, // = @=
     LogicalOr,  // or
     LogicalAnd, // and
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseAnd,
     Equality,   // == !=
     Comparison, // < <= > >=
     Term,       // + -
     Factor,     // * / (yet unused)
-    Unary,      // ! - & *
+    Unary,      // ! - & @
     Call,       // () []
     Primary,
 }
@@ -21,7 +24,10 @@ impl Precedence {
             Precedence::None => Precedence::Assignment,
             Precedence::Assignment => Precedence::LogicalOr,
             Precedence::LogicalOr => Precedence::LogicalAnd,
-            Precedence::LogicalAnd => Precedence::Equality,
+            Precedence::LogicalAnd => Precedence::BitwiseOr,
+            Precedence::BitwiseOr => Precedence::BitwiseXor,
+            Precedence::BitwiseXor => Precedence::BitwiseAnd,
+            Precedence::BitwiseAnd => Precedence::Equality,
             Precedence::Equality => Precedence::Comparison,
             Precedence::Comparison => Precedence::Term,
             Precedence::Term => Precedence::Factor,
@@ -39,6 +45,9 @@ impl From<TokenKind> for Precedence {
             TokenKind::Eq | TokenKind::AtEq => Precedence::Assignment,
             TokenKind::Or => Precedence::LogicalOr,
             TokenKind::And => Precedence::LogicalAnd,
+            TokenKind::Pipe => Precedence::BitwiseOr,
+            TokenKind::Caret => Precedence::BitwiseXor,
+            TokenKind::Ampersand => Precedence::BitwiseAnd,
             TokenKind::EqEq | TokenKind::BangEq => Precedence::Equality,
             TokenKind::Less | TokenKind::LessEq | TokenKind::Greater | TokenKind::GreaterEq => {
                 Precedence::Comparison

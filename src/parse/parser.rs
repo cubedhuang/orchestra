@@ -240,11 +240,14 @@ impl<'src> Parser<'src> {
             | TokenKind::Greater
             | TokenKind::GreaterEq
             | TokenKind::Plus
-            | TokenKind::Minus => self.binary(left),
+            | TokenKind::Minus
+            | TokenKind::Pipe
+            | TokenKind::Caret
+            | TokenKind::Ampersand => self.binary(left),
             TokenKind::LeftParen => self.call(left),
             _ => Err(SyntaxError::UnexpectedToken {
-                span: self.current.span,
-                context: "expected operator or end of expression".into(),
+                span: self.previous.span,
+                context: "in expression".into(),
             }
             .into()),
         }
@@ -316,6 +319,9 @@ impl<'src> Parser<'src> {
                     TokenKind::GreaterEq => BinaryOp::GreaterEqual,
                     TokenKind::Plus => BinaryOp::Add,
                     TokenKind::Minus => BinaryOp::Subtract,
+                    TokenKind::Pipe => BinaryOp::BitwiseOr,
+                    TokenKind::Caret => BinaryOp::BitwiseXor,
+                    TokenKind::Ampersand => BinaryOp::BitwiseAnd,
                     _ => unreachable!(),
                 },
                 right: Box::new(right),
@@ -352,7 +358,7 @@ impl<'src> Parser<'src> {
     fn prefix(&mut self) -> Result<Spanned<Expression<'src>>> {
         self.advance()?;
         match self.previous.kind {
-            TokenKind::Minus | TokenKind::Bang | TokenKind::At => self.unary(),
+            TokenKind::Minus | TokenKind::Bang | TokenKind::Tilde | TokenKind::At => self.unary(),
             TokenKind::Number => self.number(),
             TokenKind::Identifier => self.identifier(),
             TokenKind::Ampersand => self.address(),
@@ -375,6 +381,7 @@ impl<'src> Parser<'src> {
                 op: match op {
                     TokenKind::Minus => UnaryOp::Negate,
                     TokenKind::Bang => UnaryOp::LogicalNot,
+                    TokenKind::Tilde => UnaryOp::BitwiseNot,
                     TokenKind::At => UnaryOp::Dereference,
                     _ => unreachable!(),
                 },

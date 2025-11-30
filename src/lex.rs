@@ -1,4 +1,4 @@
-use std::{iter::Peekable, str::CharIndices};
+use std::{fmt::Display, iter::Peekable, str::CharIndices};
 
 use miette::{Diagnostic, SourceSpan};
 use phf::phf_map;
@@ -29,6 +29,7 @@ pub enum TokenKind {
     Minus,
     Star,
     Slash,
+    Ampersand,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -48,32 +49,106 @@ pub enum TokenKind {
     // Keywords
     Let,
     Fn,
-    For,
-    While,
     If,
+    Else,
+    While,
+    For,
+    Return,
+    Or,
+    And,
 
     Number,
     String,
     Identifier,
 
     Eoi,
+    // invalid state for parser.previous
+    Invalid,
+}
+
+impl Display for TokenKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            // Symbols
+            TokenKind::Plus => write!(f, "'+'"),
+            TokenKind::Minus => write!(f, "'-'"),
+            TokenKind::Star => write!(f, "'*'"),
+            TokenKind::Slash => write!(f, "'/'"),
+            TokenKind::Ampersand => write!(f, "'/'"),
+            TokenKind::LeftParen => write!(f, "'('"),
+            TokenKind::RightParen => write!(f, "')'"),
+            TokenKind::LeftBrace => write!(f, "'{{'"),
+            TokenKind::RightBrace => write!(f, "'}}'"),
+            TokenKind::Semi => write!(f, "';'"),
+            TokenKind::Comma => write!(f, "','"),
+            TokenKind::Dot => write!(f, "'.'"),
+            TokenKind::Eq => write!(f, "'='"),
+            TokenKind::EqEq => write!(f, "'=='"),
+            TokenKind::Bang => write!(f, "'!'"),
+            TokenKind::BangEq => write!(f, "'!='"),
+            TokenKind::Less => write!(f, "'<'"),
+            TokenKind::LessEq => write!(f, "'<='"),
+            TokenKind::Greater => write!(f, "'>'"),
+            TokenKind::GreaterEq => write!(f, "'>='"),
+
+            // Keywords
+            TokenKind::Let => write!(f, "'let'"),
+            TokenKind::Fn => write!(f, "'fn'"),
+            TokenKind::If => write!(f, "'if'"),
+            TokenKind::Else => write!(f, "'else'"),
+            TokenKind::While => write!(f, "'while'"),
+            TokenKind::For => write!(f, "'for'"),
+            TokenKind::Return => write!(f, "'return'"),
+            TokenKind::Or => write!(f, "'or'"),
+            TokenKind::And => write!(f, "'and'"),
+
+            TokenKind::Number => write!(f, "<number>"),
+            TokenKind::String => write!(f, "<string>"),
+            TokenKind::Identifier => write!(f, "<identifier>"),
+
+            TokenKind::Eoi => write!(f, "EOI"),
+            // invalid state for parser.previous
+            TokenKind::Invalid => write!(f, "INVALID"),
+        }
+    }
 }
 
 static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "let" => TokenKind::Let,
     "fn" => TokenKind::Fn,
-    "for" => TokenKind::For,
-    "while" => TokenKind::While,
     "if" => TokenKind::If,
+    "else" => TokenKind::Else,
+    "while" => TokenKind::While,
+    "for" => TokenKind::For,
+    "return" => TokenKind::Return,
+    "or" => TokenKind::Or,
+    "and" => TokenKind::And,
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Token<'src> {
-    kind: TokenKind,
-    lexeme: &'src str,
-    location: usize,
+    pub kind: TokenKind,
+    pub lexeme: &'src str,
+    pub location: usize,
 }
 
+impl<'src> Token<'src> {
+    pub fn invalid() -> Token<'static> {
+        Token {
+            kind: TokenKind::Invalid,
+            lexeme: "",
+            location: 0,
+        }
+    }
+}
+
+impl<'src> From<Token<'src>> for SourceSpan {
+    fn from(token: Token<'src>) -> Self {
+        SourceSpan::new(token.location.into(), token.lexeme.len())
+    }
+}
+
+#[derive(Debug)]
 pub struct Lexer<'src> {
     start: usize,
     current: usize,
@@ -105,7 +180,7 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn scan_token(&mut self) -> Result<Token<'src>, LexError> {
+    pub fn scan_token(&mut self) -> Result<Token<'src>, LexError> {
         self.skip_whitespace();
         self.start = self.current;
 
@@ -127,6 +202,7 @@ impl<'src> Lexer<'src> {
             '+' => Ok(self.make_token(TokenKind::Plus)),
             '/' => Ok(self.make_token(TokenKind::Slash)),
             '*' => Ok(self.make_token(TokenKind::Star)),
+            '&' => Ok(self.make_token(TokenKind::Ampersand)),
             '!' => {
                 let kind = if self.matches('=') {
                     TokenKind::BangEq
@@ -274,11 +350,12 @@ mod tests {
 
     #[test]
     fn symbols() {
-        let source = "+-*/(){};,.= == ! != < <= > >=";
+        let source = "+-*&/(){};,.= == ! != < <= > >=";
         let expected = [
             TokenKind::Plus,
             TokenKind::Minus,
             TokenKind::Star,
+            TokenKind::Ampersand,
             TokenKind::Slash,
             TokenKind::LeftParen,
             TokenKind::RightParen,

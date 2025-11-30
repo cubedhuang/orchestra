@@ -1,1 +1,5 @@
-123 if test "123
+fn f(a, b) {
+    print(*&a);
+}
+
+let a = 10;

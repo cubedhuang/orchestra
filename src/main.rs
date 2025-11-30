@@ -1,8 +1,11 @@
 use clap::Parser;
 use miette::{IntoDiagnostic, Result, miette};
 
-mod compiler;
+mod ast;
+mod error;
+mod ir;
 mod lex;
+mod parser;
 
 /// orchestra to LC3 assembly compiler
 #[derive(Parser, Debug)]
@@ -20,16 +23,11 @@ fn main() -> Result<()> {
 
     let source = std::fs::read_to_string(args.input).into_diagnostic()?;
 
-    let lexer = lex::Lexer::new(&source);
-
-    for token in lexer {
-        match token {
-            Ok(token) => println!("{:?}", token),
-            Err(err) => {
-                return Err(miette!(err).with_source_code(source).into());
-            }
-        }
-    }
+    let ir = match parser::parse(&source) {
+        Ok(ir) => ir,
+        Err(err) => return Err(miette!(err).with_source_code(source).into()),
+    };
+    dbg!(ir);
 
     Ok(())
 }

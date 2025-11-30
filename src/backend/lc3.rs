@@ -11,8 +11,8 @@ pub fn generate_lc3(ir: &IR) -> String {
 
 pub struct LC3Backend {
     output: String,
+    current_function_name: String,
     constants: Vec<isize>,
-    global_constant_offset: usize,
     label_counter: usize,
 }
 
@@ -21,7 +21,7 @@ impl LC3Backend {
         Self {
             output: String::new(),
             constants: vec![],
-            global_constant_offset: 0,
+            current_function_name: "".into(),
             label_counter: 0,
         }
     }
@@ -31,6 +31,7 @@ impl LC3Backend {
         self.emit_globals(&ir.globals);
 
         for (_, function) in &ir.functions {
+            self.current_function_name = function.name.clone();
             self.constants.clear();
             self.label_counter = 0;
             self.emit_function(function);
@@ -113,10 +114,14 @@ impl LC3Backend {
             .constants
             .iter()
             .enumerate()
-            .map(|(i, value)| format!("const_{}  .fill {value}", i + self.global_constant_offset))
+            .map(|(i, value)| {
+                format!(
+                    "fn_{}_const_{i}  .fill {value}",
+                    &self.current_function_name
+                )
+            })
             .join("\n");
         self.writeln(&constants);
-        self.global_constant_offset += self.constants.len();
     }
 
     fn emit_op(&mut self, op: &Op, function: &Function) {
@@ -302,7 +307,7 @@ impl LC3Backend {
             }
 
             Op::Call(name) => {
-                self.writeln(&format!("  JSR fn_{}", name));
+                self.writeln(&format!("  JSR fn_{name}"));
             }
 
             Op::Return => {
@@ -359,18 +364,23 @@ impl LC3Backend {
                 self.writeln(&format!("  ADD {reg}, {reg}, #{value}"));
             }
         } else {
-            let label = format!(
-                "const_{}",
-                self.constants.len() + self.global_constant_offset
-            );
-            self.constants.push(value);
-            self.writeln(&format!("  LD {}, {}", reg, label));
+            let index = if let Some(index) = self.constants.iter().position(|&v| v == value) {
+                index
+            } else {
+                self.constants.push(value);
+                self.constants.len() - 1
+            };
+
+            self.writeln(&format!(
+                "  LD {reg}, fn_{}_const_{index}",
+                &self.current_function_name
+            ));
         }
     }
 
     fn load_reg_offset(&mut self, base: &str, dest: &str, offset: isize) {
         if offset >= -32 && offset <= 31 {
-            self.writeln(&format!("  LDR {dest}, {base}, #{}", offset));
+            self.writeln(&format!("  LDR {dest}, {base}, #{offset}"));
         } else {
             self.load_constant(dest, offset as isize);
             self.writeln(&format!("  ADD {dest}, {base}, {dest}"));
@@ -380,7 +390,7 @@ impl LC3Backend {
 
     fn store_reg_offset(&mut self, base: &str, src: &str, offset: isize, temp: &str) {
         if offset >= -32 && offset <= 31 {
-            self.writeln(&format!("  STR {src}, {base}, #{}", offset));
+            self.writeln(&format!("  STR {src}, {base}, #{offset}"));
         } else {
             self.load_constant(temp, offset as isize);
             self.writeln(&format!("  ADD {temp}, {base}, {temp}"));

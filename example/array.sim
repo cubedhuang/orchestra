@@ -15,7 +15,7 @@ fn_main
   ADD R5, R6, #-1
   ADD R6, R6, #-2
   ;; Push(16384)
-  LD R0, const_0
+  LD R0, fn_main_const_0
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; SetLocal(0)
@@ -143,5 +143,5 @@ fn_main_teardown
   LDR R7, R6, #0
   ADD R6, R6, #1
   RET
-const_0  .fill 16384
+fn_main_const_0  .fill 16384
 .end

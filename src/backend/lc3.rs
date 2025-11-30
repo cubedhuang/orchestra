@@ -138,7 +138,7 @@ impl LC3Backend {
             }
 
             Op::SetLocal(index) => {
-                self.pop("R0");
+                self.peek("R0");
                 self.store_reg_offset("R5", "R0", -(*index as isize), "R1");
             }
 
@@ -148,7 +148,7 @@ impl LC3Backend {
             }
 
             Op::SetParameter(index) => {
-                self.pop("R0");
+                self.peek("R0");
                 self.store_reg_offset("R5", "R0", *index as isize + 4, "R1");
             }
 
@@ -158,7 +158,7 @@ impl LC3Backend {
             }
 
             Op::SetGlobal(index) => {
-                self.pop("R0");
+                self.peek("R0");
                 self.store_reg_offset("R4", "R0", *index as isize, "R1");
             }
 

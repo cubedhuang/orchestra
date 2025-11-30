@@ -285,7 +285,7 @@ impl Display for BinaryOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
     Negate,
-    Not,
+    LogicalNot,
     Dereference,
 }
 
@@ -293,7 +293,7 @@ impl Display for UnaryOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             UnaryOp::Negate => write!(f, "-"),
-            UnaryOp::Not => write!(f, "!"),
+            UnaryOp::LogicalNot => write!(f, "!"),
             UnaryOp::Dereference => write!(f, "*"),
         }
     }

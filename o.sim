@@ -1,0 +1,172 @@
+.orig x3000
+  LEA R4, globals
+  LD R6, stack_base
+  ADD R5, R6, #0
+  JSR fn_main
+  HALT
+stack_base  .fill xF000
+globals
+  .fill 10
+fn_main:
+  ADD R6, R6, #-1
+  ADD R6, R6, #-1
+  STR R7, R6, #0
+  ADD R6, R6, #-1
+  STR R5, R6, #0
+  ADD R5, R6, #-1
+  ADD R6, R6, #-1
+  ;; GetGlobal(0)
+  LDR R0, R4, #0
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Call(fibonacci)
+  JSR fn_fibonacci
+  ;; SetLocal(0)
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  STR R0, R5, #0
+fn_main_teardown
+  ADD R6, R5, #1
+  LDR R5, R6, #0
+  ADD R6, R6, #1
+  LDR R7, R6, #0
+  ADD R6, R6, #1
+  RET
+fn_fibonacci:
+  ADD R6, R6, #-1
+  ADD R6, R6, #-1
+  STR R7, R6, #0
+  ADD R6, R6, #-1
+  STR R5, R6, #0
+  ADD R5, R6, #-1
+  ADD R6, R6, #-2
+  ;; GetParameter(0)
+  LDR R0, R5, #4
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Push(1)
+  AND R0, R0, #0
+  ADD R0, R0, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; LessEqual
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  NOT R1, R1
+  ADD R1, R1, #1
+  ADD R0, R0, R1
+  BRp COMP_FALSE_0
+  AND R0, R0, #0
+  ADD R0, R0, #1
+  BR COMP_END_1
+COMP_FALSE_0
+  AND R0, R0, #0
+COMP_END_1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; JumpIfZero(0)
+  LDR R0, R6, #0
+  BRz fn_fibonacci_label_0
+  ;; Pop
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ;; Push(1)
+  AND R0, R0, #0
+  ADD R0, R0, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Return
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  STR R0, R5, #3
+  BR fn_fibonacci_teardown
+  ;; Jump(1)
+  BR fn_fibonacci_label_1
+  ;; Label(0)
+fn_fibonacci_label_0
+  ;; Pop
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ;; GetParameter(0)
+  LDR R0, R5, #4
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Push(1)
+  AND R0, R0, #0
+  ADD R0, R0, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Subtract
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  NOT R1, R1
+  ADD R1, R1, #1
+  ADD R0, R0, R1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Call(fibonacci)
+  JSR fn_fibonacci
+  ;; SetLocal(0)
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  STR R0, R5, #0
+  ;; GetParameter(0)
+  LDR R0, R5, #4
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Push(2)
+  AND R0, R0, #0
+  ADD R0, R0, #2
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Subtract
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  NOT R1, R1
+  ADD R1, R1, #1
+  ADD R0, R0, R1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Call(fibonacci)
+  JSR fn_fibonacci
+  ;; SetLocal(1)
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  STR R0, R5, #-1
+  ;; GetLocal(0)
+  LDR R0, R5, #0
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; GetLocal(1)
+  LDR R0, R5, #-1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Add
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R0, R0, R1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Return
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  STR R0, R5, #3
+  BR fn_fibonacci_teardown
+  ;; Label(1)
+fn_fibonacci_label_1
+fn_fibonacci_teardown
+  ADD R6, R5, #1
+  LDR R5, R6, #0
+  ADD R6, R6, #1
+  LDR R7, R6, #0
+  ADD R6, R6, #1
+  RET
+.end

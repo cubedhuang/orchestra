@@ -1,12 +1,15 @@
 use clap::Parser;
 use miette::{IntoDiagnostic, Result, miette};
 
+use crate::backend::lc3::generate_lc3;
+
 mod ast;
-mod compiler;
+mod backend;
+mod compile;
 mod error;
 mod ir;
 mod lex;
-mod parser;
+mod parse;
 
 /// orchestra to LC3 assembly compiler
 #[derive(Parser, Debug)]
@@ -24,11 +27,13 @@ fn main() -> Result<()> {
 
     let source = std::fs::read_to_string(args.input).into_diagnostic()?;
 
-    let ir = match parser::parse(&source) {
+    let ir = match compile::compile(&source) {
         Ok(ir) => ir,
         Err(err) => return Err(miette!(err).with_source_code(source).into()),
     };
     println!("{ir}");
+
+    std::fs::write(args.output, generate_lc3(&ir)).into_diagnostic()?;
 
     Ok(())
 }

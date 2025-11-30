@@ -1,1 +1,386 @@
+use std::cmp;
 
+use itertools::Itertools;
+
+use crate::ir::{Function, IR, Op};
+
+pub fn generate_lc3(ir: &IR) -> String {
+    let backend = LC3Backend::new();
+    backend.generate(ir)
+}
+
+pub struct LC3Backend {
+    output: String,
+    constants: Vec<isize>,
+    global_constant_offset: usize,
+    label_counter: usize,
+}
+
+impl LC3Backend {
+    pub fn new() -> Self {
+        Self {
+            output: String::new(),
+            constants: vec![],
+            global_constant_offset: 0,
+            label_counter: 0,
+        }
+    }
+
+    pub fn generate(mut self, ir: &IR) -> String {
+        self.emit_header();
+        self.emit_globals(&ir.globals);
+
+        for (_, function) in &ir.functions {
+            self.constants.clear();
+            self.label_counter = 0;
+            self.emit_function(function);
+        }
+
+        self.writeln(".end");
+
+        self.output
+    }
+
+    fn emit_header(&mut self) {
+        self.writeln(".orig x3000");
+        self.writeln("  LEA R4, globals");
+        self.writeln("  LD R6, stack_base");
+        self.writeln("  ADD R5, R6, #0");
+        self.writeln("  JSR fn_main");
+        self.writeln("  HALT");
+        self.writeln("stack_base  .fill xF000");
+    }
+
+    fn emit_globals(&mut self, globals: &[isize]) {
+        if globals.is_empty() {
+            return;
+        }
+
+        self.writeln("globals");
+        for value in globals {
+            self.writeln(&format!("  .fill {value}"));
+        }
+    }
+
+    fn emit_function(&mut self, function: &Function) {
+        self.writeln(&format!("fn_{}:", function.name));
+
+        self.emit_buildup(function);
+
+        for op in &function.code {
+            self.emit_op(op, function);
+        }
+
+        self.emit_teardown(function);
+        if !self.constants.is_empty() {
+            self.emit_constants();
+        }
+    }
+
+    fn emit_buildup(&mut self, function: &Function) {
+        // reserve return value space
+        self.writeln("  ADD R6, R6, #-1");
+
+        // save return address
+        self.writeln("  ADD R6, R6, #-1");
+        self.writeln("  STR R7, R6, #0");
+
+        // save old frame pointer
+        self.writeln("  ADD R6, R6, #-1");
+        self.writeln("  STR R5, R6, #0");
+
+        // set new frame pointer
+        self.writeln("  ADD R5, R6, #-1");
+
+        // locals (always at least 1)
+        self.emit_add_immediate("R6", "R6", -(cmp::max(function.locals, 1) as isize));
+    }
+
+    fn emit_teardown(&mut self, function: &Function) {
+        self.writeln(&format!("fn_{}_teardown", function.name));
+
+        // restore old frame pointer
+        self.writeln("  ADD R6, R5, #1");
+        self.writeln("  LDR R5, R6, #0");
+
+        // restore return address
+        self.writeln("  ADD R6, R6, #1");
+        self.writeln("  LDR R7, R6, #0");
+
+        // pop return address and return
+        self.writeln("  ADD R6, R6, #1");
+        self.writeln("  RET");
+    }
+
+    fn emit_constants(&mut self) {
+        let constants = self
+            .constants
+            .iter()
+            .enumerate()
+            .map(|(i, value)| format!("const_{}  .fill {value}", i + self.global_constant_offset))
+            .join("\n");
+        self.writeln(&constants);
+        self.global_constant_offset += self.constants.len();
+    }
+
+    fn emit_op(&mut self, op: &Op, function: &Function) {
+        self.writeln(&format!("  ;; {op}"));
+
+        match op {
+            Op::Push(value) => {
+                self.load_constant("R0", *value);
+                self.push("R0");
+            }
+
+            Op::Pop => {
+                self.pop("R0");
+            }
+
+            Op::GetLocal(index) => {
+                self.load_reg_offset("R5", "R0", -(*index as isize));
+                self.push("R0");
+            }
+
+            Op::SetLocal(index) => {
+                self.pop("R0");
+                self.store_reg_offset("R5", "R0", -(*index as isize), "R1");
+            }
+
+            Op::GetParameter(index) => {
+                self.load_reg_offset("R5", "R0", *index as isize + 4);
+                self.push("R0");
+            }
+
+            Op::SetParameter(index) => {
+                self.pop("R0");
+                self.store_reg_offset("R5", "R0", *index as isize + 4, "R1");
+            }
+
+            Op::GetGlobal(index) => {
+                self.load_reg_offset("R4", "R0", *index as isize);
+                self.push("R0");
+            }
+
+            Op::SetGlobal(index) => {
+                self.pop("R0");
+                self.store_reg_offset("R4", "R0", *index as isize, "R1");
+            }
+
+            Op::GetLocalAddress(index) => {
+                self.emit_add_immediate("R0", "R5", -(*index as isize));
+                self.push("R0");
+            }
+
+            Op::GetParameterAddress(index) => {
+                self.emit_add_immediate("R0", "R5", *index as isize + 4);
+                self.push("R0");
+            }
+
+            Op::GetGlobalAddress(index) => {
+                self.emit_add_immediate("R0", "R4", *index as isize);
+                self.push("R0");
+            }
+
+            Op::Add => {
+                self.pop("R0");
+                self.pop("R1");
+                self.writeln("  ADD R0, R0, R1");
+                self.push("R0");
+            }
+
+            Op::Subtract => {
+                self.pop("R1"); // right
+                self.pop("R0"); // left
+                self.writeln("  NOT R1, R1");
+                self.writeln("  ADD R1, R1, #1");
+                self.writeln("  ADD R0, R0, R1");
+                self.push("R0");
+            }
+
+            Op::Negate => {
+                self.pop("R0");
+                self.writeln("  NOT R0, R0");
+                self.writeln("  ADD R0, R0, #1");
+                self.push("R0");
+            }
+
+            Op::LogicalNot => {
+                let true_label = self.fresh_label("not_true");
+                let end_label = self.fresh_label("not_end");
+                self.pop("R0");
+                // cc is set
+                self.writeln(&format!("  BRz {true_label}"));
+                // it is nonzero
+                self.writeln("  AND R0, R0, #0");
+                self.writeln(&format!("  BR {end_label}"));
+                self.writeln(&true_label);
+                // it is zero
+                self.writeln("  AND R0, R0, #0");
+                self.writeln("  ADD R0, R0, #1");
+                self.writeln(&end_label);
+                self.push("R0");
+            }
+
+            Op::Dereference => {
+                self.pop("R0");
+                self.writeln("  LDR R0, R0, #0");
+                self.push("R0");
+            }
+
+            Op::Equal => {
+                self.emit_comparison("np");
+            }
+            Op::NotEqual => {
+                self.emit_comparison("z");
+            }
+            Op::LessThan => {
+                self.emit_comparison("zp");
+            }
+            Op::LessEqual => {
+                self.emit_comparison("p");
+            }
+            Op::GreaterThan => {
+                self.emit_comparison("nz");
+            }
+            Op::GreaterEqual => {
+                self.emit_comparison("n");
+            }
+
+            Op::Label(id) => {
+                self.writeln(&format!("fn_{}_label_{id}", function.name));
+            }
+
+            Op::Jump(id) => {
+                self.writeln(&format!("  BR fn_{}_label_{id}", function.name));
+            }
+
+            Op::JumpIfZero(id) => {
+                self.peek("R0");
+                self.writeln(&format!("  BRz fn_{}_label_{id}", function.name));
+            }
+
+            Op::JumpIfNotZero(id) => {
+                self.peek("R0");
+                self.writeln(&format!("  BRnp fn_{}_label_{id}", function.name));
+            }
+
+            Op::Call(name) => {
+                self.writeln(&format!("  JSR fn_{}", name));
+            }
+
+            Op::Return => {
+                self.pop("R0");
+                self.writeln("  STR R0, R5, #3");
+                self.writeln(&format!("  BR fn_{}_teardown", function.name));
+            }
+        }
+    }
+
+    fn emit_comparison(&mut self, branch_false: &str) {
+        self.pop("R1"); // right
+        self.pop("R0"); // left
+
+        self.writeln("  NOT R1, R1");
+        self.writeln("  ADD R1, R1, #1");
+        self.writeln("  ADD R0, R0, R1");
+
+        let false_label = self.fresh_label("COMP_FALSE");
+        let end_label = self.fresh_label("COMP_END");
+
+        self.writeln(&format!("  BR{branch_false} {false_label}"));
+        // true
+        self.writeln("  AND R0, R0, #0");
+        self.writeln("  ADD R0, R0, #1");
+        self.writeln(&format!("  BR {end_label}"));
+        self.writeln(&format!("{false_label}"));
+        // false
+        self.writeln("  AND R0, R0, #0");
+        self.writeln(&format!("{end_label}"));
+
+        self.push("R0");
+    }
+
+    fn push(&mut self, reg: &str) {
+        self.writeln(&format!("  ADD R6, R6, #-1"));
+        self.writeln(&format!("  STR {reg}, R6, #0"));
+    }
+
+    fn pop(&mut self, reg: &str) {
+        // this way preserves condition codes
+        self.writeln(&format!("  ADD R6, R6, #1"));
+        self.writeln(&format!("  LDR {reg}, R6, #-1"));
+    }
+
+    fn peek(&mut self, reg: &str) {
+        self.writeln(&format!("  LDR {reg}, R6, #0"));
+    }
+
+    fn load_constant(&mut self, reg: &str, value: isize) {
+        if value >= -16 && value <= 15 {
+            self.writeln(&format!("  AND {reg}, {reg}, #0"));
+            if value != 0 {
+                self.writeln(&format!("  ADD {reg}, {reg}, #{value}"));
+            }
+        } else {
+            let label = format!(
+                "const_{}",
+                self.constants.len() + self.global_constant_offset
+            );
+            self.constants.push(value);
+            self.writeln(&format!("  LD {}, {}", reg, label));
+        }
+    }
+
+    fn load_reg_offset(&mut self, base: &str, dest: &str, offset: isize) {
+        if offset >= -32 && offset <= 31 {
+            self.writeln(&format!("  LDR {dest}, {base}, #{}", offset));
+        } else {
+            self.load_constant(dest, offset as isize);
+            self.writeln(&format!("  ADD {dest}, {base}, {dest}"));
+            self.writeln(&format!("  LDR {dest}, {dest}, #0"));
+        }
+    }
+
+    fn store_reg_offset(&mut self, base: &str, src: &str, offset: isize, temp: &str) {
+        if offset >= -32 && offset <= 31 {
+            self.writeln(&format!("  STR {src}, {base}, #{}", offset));
+        } else {
+            self.load_constant(temp, offset as isize);
+            self.writeln(&format!("  ADD {temp}, {base}, {temp}"));
+            self.writeln(&format!("  STR R0, {temp}, #0"));
+        }
+    }
+
+    fn emit_add_immediate(&mut self, dest: &str, src: &str, value: isize) {
+        if value == 0 {
+            if dest != src {
+                self.writeln(&format!("  ADD {dest}, {src}, #0"));
+            }
+        } else if value >= -16 && value <= 15 {
+            self.writeln(&format!("  ADD {dest}, {src}, #{value}"));
+        } else {
+            let mut remaining = value;
+
+            let chunk = remaining.clamp(-16, 15);
+            self.writeln(&format!("  ADD {dest}, {src}, #{chunk}"));
+            remaining -= chunk;
+
+            while remaining != 0 {
+                let chunk = remaining.clamp(-16, 15);
+                self.writeln(&format!("  ADD {dest}, {dest}, #{chunk}"));
+                remaining -= chunk;
+            }
+        }
+    }
+
+    fn fresh_label(&mut self, prefix: &str) -> String {
+        let label = format!("{prefix}_{}", self.label_counter);
+        self.label_counter += 1;
+        label
+    }
+
+    fn writeln(&mut self, line: &str) {
+        self.output.push_str(line);
+        self.output.push('\n');
+    }
+}

@@ -1,5 +1,4 @@
-use miette::{Diagnostic, SourceSpan};
-use thiserror::Error;
+use miette::SourceSpan;
 
 use crate::{
     ast::{
@@ -8,108 +7,11 @@ use crate::{
     },
     error::Result,
     lex::{Lexer, Token, TokenKind},
+    parse::{error::SyntaxError, prec::Precedence},
 };
 
-#[derive(Error, Debug, Diagnostic)]
-pub enum SyntaxError {
-    #[error("expected {expected} {context}")]
-    #[diagnostic(code(compile::expected_token))]
-    ExpectedToken {
-        expected: TokenKind,
-        #[label("here")]
-        span: SourceSpan,
-        context: String,
-    },
-
-    #[error("unexpected token {context}")]
-    #[diagnostic(code(compile::unexpected_token))]
-    UnexpectedToken {
-        #[label("here")]
-        span: SourceSpan,
-        context: String,
-    },
-
-    #[error("invalid number")]
-    #[diagnostic(code(compile::invalid_number))]
-    InvalidNumber {
-        #[label("here")]
-        span: SourceSpan,
-    },
-
-    #[error("invalid assignment target; target must be an identifier")]
-    #[diagnostic(code(compile::invalid_assignment_target))]
-    InvalidAssignmentTarget {
-        #[label("here")]
-        span: SourceSpan,
-    },
-
-    #[error("invalid call target; target must be an identifier")]
-    #[diagnostic(code(compile::invalid_call_target))]
-    InvalidCallTarget {
-        #[label("here")]
-        span: SourceSpan,
-    },
-}
-
-pub fn parse<'src>(source: &'src str) -> Result<Program<'src>> {
-    let mut parser = Parser::new(source)?;
-    let program = parser.program()?;
-    return Ok(program);
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum Precedence {
-    None,
-    Assignment, // =
-    LogicalOr,  // or
-    LogicalAnd, // and
-    Equality,   // == !=
-    Comparison, // < <= > >=
-    Term,       // + -
-    Factor,     // * / (yet unused)
-    Unary,      // ! - & *
-    Call,       // () []
-    Primary,
-}
-
-impl Precedence {
-    fn next(&self) -> Precedence {
-        match self {
-            Precedence::None => Precedence::Assignment,
-            Precedence::Assignment => Precedence::LogicalOr,
-            Precedence::LogicalOr => Precedence::LogicalAnd,
-            Precedence::LogicalAnd => Precedence::Equality,
-            Precedence::Equality => Precedence::Comparison,
-            Precedence::Comparison => Precedence::Term,
-            Precedence::Term => Precedence::Factor,
-            Precedence::Factor => Precedence::Unary,
-            Precedence::Unary => Precedence::Call,
-            Precedence::Call => Precedence::Primary,
-            Precedence::Primary => unreachable!(),
-        }
-    }
-}
-
-impl From<TokenKind> for Precedence {
-    fn from(value: TokenKind) -> Self {
-        match value {
-            TokenKind::Eq => Precedence::Assignment,
-            TokenKind::Or => Precedence::LogicalOr,
-            TokenKind::And => Precedence::LogicalAnd,
-            TokenKind::EqEq | TokenKind::BangEq => Precedence::Equality,
-            TokenKind::Less | TokenKind::LessEq | TokenKind::Greater | TokenKind::GreaterEq => {
-                Precedence::Comparison
-            }
-            TokenKind::Plus | TokenKind::Minus => Precedence::Term,
-            TokenKind::LeftParen => Precedence::Call,
-            _ => Precedence::None,
-        }
-    }
-}
-
 #[derive(Debug)]
-struct Parser<'src> {
-    source: &'src str,
+pub struct Parser<'src> {
     lexer: Lexer<'src>,
     current: Token<'src>,
     previous: Token<'src>,
@@ -118,7 +20,6 @@ struct Parser<'src> {
 impl<'src> Parser<'src> {
     pub fn new(source: &'src str) -> Result<Parser<'src>> {
         Ok(Parser {
-            source,
             lexer: Lexer::new(source),
             current: Token::invalid(),
             previous: Token::invalid(),
@@ -462,7 +363,7 @@ impl<'src> Parser<'src> {
             Expression::Unary {
                 op: match op {
                     TokenKind::Minus => UnaryOp::Negate,
-                    TokenKind::Bang => UnaryOp::Not,
+                    TokenKind::Bang => UnaryOp::LogicalNot,
                     TokenKind::Star => UnaryOp::Dereference,
                     _ => unreachable!(),
                 },
@@ -550,61 +451,6 @@ impl<'src> Parser<'src> {
                 context: context.into(),
             }
             .into())
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn bad_global_declarations() {
-        let sources = ["let f =", "fn a() {", "fn ()"];
-        for source in sources {
-            assert!(parse(source).is_err());
-        }
-    }
-
-    #[test]
-    fn good_global_declarations() {
-        let sources = ["let a = 10;", "let a;", "fn a() {}", "fn f(a, b) {}"];
-        for source in sources {
-            assert!(parse(source).is_ok());
-        }
-    }
-
-    #[test]
-    fn expressions() {
-        let sources = [
-            "fn main() { x = 5; }",
-            "fn main() { x = y = 5; }",
-            "fn main() { a + b - c; }",
-            "fn main() { !x; }",
-            "fn main() { -5; }",
-            "fn main() { *p; }",
-            "fn main() { &x; }",
-            "fn main() { foo(1, 2, 3); }",
-            "fn main() { x and y or z; }",
-            "fn main() { (a + b) - c; }",
-            "fn main() { *&x; }",
-        ];
-
-        for source in sources {
-            assert!(parse(source).is_ok());
-        }
-    }
-
-    #[test]
-    fn bad_expressions() {
-        let sources = [
-            "fn main() { &(x + 1); }",
-            "fn main() { (x + y) = 5; }",
-            "fn main() { 5(); }",
-        ];
-
-        for source in sources {
-            assert!(parse(source).is_err());
         }
     }
 }

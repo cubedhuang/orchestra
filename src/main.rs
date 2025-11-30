@@ -2,6 +2,7 @@ use clap::Parser;
 use miette::{IntoDiagnostic, Result, miette};
 
 mod ast;
+mod compiler;
 mod error;
 mod ir;
 mod lex;
@@ -27,7 +28,7 @@ fn main() -> Result<()> {
         Ok(ir) => ir,
         Err(err) => return Err(miette!(err).with_source_code(source).into()),
     };
-    dbg!(ir);
+    println!("{ir}");
 
     Ok(())
 }

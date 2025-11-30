@@ -76,8 +76,7 @@ arguments : expression (',' expression)*
 
 grouping : '(' expression ')'
 
-number : sign? value
-sign : '+' | '-'
+number : '-'? value
 value :
     | <decimal literal>
     | '0x'<hex literal>

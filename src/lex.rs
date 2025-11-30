@@ -129,7 +129,7 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
 pub struct Token<'src> {
     pub kind: TokenKind,
     pub lexeme: &'src str,
-    pub location: usize,
+    pub span: SourceSpan,
 }
 
 impl<'src> Token<'src> {
@@ -137,14 +137,8 @@ impl<'src> Token<'src> {
         Token {
             kind: TokenKind::Invalid,
             lexeme: "",
-            location: 0,
+            span: SourceSpan::new(0.into(), 0),
         }
-    }
-}
-
-impl<'src> From<Token<'src>> for SourceSpan {
-    fn from(token: Token<'src>) -> Self {
-        SourceSpan::new(token.location.into(), token.lexeme.len())
     }
 }
 
@@ -249,7 +243,7 @@ impl<'src> Lexer<'src> {
         Token {
             kind,
             lexeme: &self.source[self.start..self.current],
-            location: self.start,
+            span: SourceSpan::new(self.start.into(), self.current - self.start),
         }
     }
 

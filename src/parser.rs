@@ -3,8 +3,8 @@ use thiserror::Error;
 
 use crate::{
     ast::{
-        BinaryOp, Block, Declaration, Expression, GlobalDeclaration, LogicalOp, Program, Statement,
-        UnaryOp,
+        BinaryOp, Block, Declaration, Expression, GlobalDeclaration, Identifier, LogicalOp,
+        Program, Spanned, Statement, UnaryOp,
     },
     error::Result,
     lex::{Lexer, Token, TokenKind},
@@ -132,44 +132,49 @@ impl<'src> Parser<'src> {
 
         loop {
             if self.matches(TokenKind::Eoi)? {
-                return Ok(program);
+                return Ok(Program(program));
             }
             program.push(self.global_declaration()?);
         }
     }
 
-    fn global_declaration(&mut self) -> Result<GlobalDeclaration<'src>> {
+    fn global_declaration(&mut self) -> Result<Spanned<GlobalDeclaration<'src>>> {
         if self.matches(TokenKind::Fn)? {
             self.function()
         } else if self.matches(TokenKind::Let)? {
             self.global_variable()
         } else {
             return Err(SyntaxError::UnexpectedToken {
-                span: SourceSpan::new((self.source.len() - 1).into(), 0),
+                span: self.current.span,
                 context: "at global level".into(),
             }
             .into());
         }
     }
 
-    fn function(&mut self) -> Result<GlobalDeclaration<'src>> {
+    fn function(&mut self) -> Result<Spanned<GlobalDeclaration<'src>>> {
+        let start = self.previous.span;
         self.consume(TokenKind::Identifier, "in function declaration")?;
-        let name = self.previous.lexeme;
+        let name = self.previous.into();
         self.consume(TokenKind::LeftParen, "after function name")?;
         let arguments = self.function_arguments()?;
         self.consume(TokenKind::LeftBrace, "after function declaration")?;
         let body = self.block()?;
-        Ok(GlobalDeclaration::Function {
-            name,
-            arguments,
-            body,
-        })
+
+        Ok(Spanned::new(
+            GlobalDeclaration::Function {
+                name,
+                arguments,
+                body,
+            },
+            self.span_from(start),
+        ))
     }
 
-    fn function_arguments(&mut self) -> Result<Vec<&'src str>> {
+    fn function_arguments(&mut self) -> Result<Vec<Identifier<'src>>> {
         let mut arguments = vec![];
         while self.matches(TokenKind::Identifier)? {
-            arguments.push(self.previous.lexeme);
+            arguments.push(self.previous.into());
 
             if !self.matches(TokenKind::Comma)? {
                 break;
@@ -179,22 +184,27 @@ impl<'src> Parser<'src> {
         Ok(arguments)
     }
 
-    fn global_variable(&mut self) -> Result<GlobalDeclaration<'src>> {
+    fn global_variable(&mut self) -> Result<Spanned<GlobalDeclaration<'src>>> {
+        let start = self.previous.span;
         self.consume(TokenKind::Identifier, "in global variable declaration")?;
-        let name = self.previous.lexeme;
+        let name = self.previous.into();
         let value =
             if self.matches(TokenKind::Eq)? {
                 self.consume(TokenKind::Number, "as global variable value")?;
                 Some(self.previous.lexeme.parse::<isize>().map_err(|_| {
                     SyntaxError::InvalidNumber {
-                        span: self.previous.into(),
+                        span: self.previous.span,
                     }
                 })?)
             } else {
                 None
             };
         self.consume(TokenKind::Semi, "after global variable declaration")?;
-        Ok(GlobalDeclaration::Variable { name, value })
+
+        Ok(Spanned::new(
+            GlobalDeclaration::Variable { name, value },
+            self.span_from(start),
+        ))
     }
 
     fn block(&mut self) -> Result<Block<'src>> {
@@ -205,32 +215,40 @@ impl<'src> Parser<'src> {
         }
 
         self.consume(TokenKind::RightBrace, "after block")?;
-        Ok(declarations)
+        Ok(Block(declarations))
     }
 
-    fn declaration(&mut self) -> Result<Declaration<'src>> {
+    fn declaration(&mut self) -> Result<Spanned<Declaration<'src>>> {
         if self.matches(TokenKind::Let)? {
             self.variable()
         } else {
-            Ok(Declaration::Statement(self.statement()?))
+            let stmt = self.statement()?;
+            let span = stmt.span;
+            Ok(Spanned::new(Declaration::Statement(stmt), span))
         }
     }
 
-    fn variable(&mut self) -> Result<Declaration<'src>> {
+    fn variable(&mut self) -> Result<Spanned<Declaration<'src>>> {
+        let start = self.previous.span;
         self.consume(TokenKind::Identifier, "in variable declaration")?;
-        let name = self.previous.lexeme;
+        let name = self.previous.into();
         let value = if self.matches(TokenKind::Eq)? {
             Some(self.expression()?)
         } else {
             None
         };
         self.consume(TokenKind::Semi, "after variable declaration")?;
-        Ok(Declaration::Variable { name, value })
+        Ok(Spanned::new(
+            Declaration::Variable { name, value },
+            self.span_from(start),
+        ))
     }
 
-    fn statement(&mut self) -> Result<Statement<'src>> {
-        if self.matches(TokenKind::RightBrace)? {
-            Ok(Statement::Block(self.block()?))
+    fn statement(&mut self) -> Result<Spanned<Statement<'src>>> {
+        if self.matches(TokenKind::LeftBrace)? {
+            let start = self.previous.span;
+            let body = self.block()?;
+            Ok(Spanned::new(Statement::Block(body), self.span_from(start)))
         } else if self.matches(TokenKind::If)? {
             self.if_statement()
         } else if self.matches(TokenKind::While)? {
@@ -238,13 +256,18 @@ impl<'src> Parser<'src> {
         } else if self.matches(TokenKind::Return)? {
             self.return_statement()
         } else {
+            let start = self.current.span;
             let expression = self.expression()?;
             self.consume(TokenKind::Semi, "after expression")?;
-            Ok(Statement::Expression(expression))
+            Ok(Spanned::new(
+                Statement::Expression(expression),
+                self.span_from(start),
+            ))
         }
     }
 
-    fn if_statement(&mut self) -> Result<Statement<'src>> {
+    fn if_statement(&mut self) -> Result<Spanned<Statement<'src>>> {
+        let start = self.previous.span;
         self.consume(TokenKind::LeftParen, "in if statement")?;
         let condition = self.expression()?;
         self.consume(TokenKind::RightParen, "after condition")?;
@@ -254,25 +277,33 @@ impl<'src> Parser<'src> {
         } else {
             None
         };
-        Ok(Statement::If {
-            condition,
-            then_stmt: Box::new(then_stmt),
-            else_stmt: else_stmt.map(Box::new),
-        })
+        Ok(Spanned::new(
+            Statement::If {
+                condition,
+                then_stmt: Box::new(then_stmt),
+                else_stmt: else_stmt.map(Box::new),
+            },
+            self.span_from(start),
+        ))
     }
 
-    fn while_statement(&mut self) -> Result<Statement<'src>> {
+    fn while_statement(&mut self) -> Result<Spanned<Statement<'src>>> {
+        let start = self.previous.span;
         self.consume(TokenKind::LeftParen, "in while statement")?;
         let condition = self.expression()?;
         self.consume(TokenKind::RightParen, "after condition")?;
         let body = self.statement()?;
-        Ok(Statement::While {
-            condition,
-            body: Box::new(body),
-        })
+        Ok(Spanned::new(
+            Statement::While {
+                condition,
+                body: Box::new(body),
+            },
+            self.span_from(start),
+        ))
     }
 
-    fn return_statement(&mut self) -> Result<Statement<'src>> {
+    fn return_statement(&mut self) -> Result<Spanned<Statement<'src>>> {
+        let start = self.previous.span;
         let expression = if self.matches(TokenKind::Semi)? {
             None
         } else {
@@ -280,14 +311,17 @@ impl<'src> Parser<'src> {
             self.consume(TokenKind::Semi, "after return statement")?;
             Some(expression)
         };
-        Ok(Statement::Return(expression))
+        Ok(Spanned::new(
+            Statement::Return(expression),
+            self.span_from(start),
+        ))
     }
 
-    fn expression(&mut self) -> Result<Expression<'src>> {
+    fn expression(&mut self) -> Result<Spanned<Expression<'src>>> {
         self.parse_precedence(Precedence::Assignment)
     }
 
-    fn parse_precedence(&mut self, precedence: Precedence) -> Result<Expression<'src>> {
+    fn parse_precedence(&mut self, precedence: Precedence) -> Result<Spanned<Expression<'src>>> {
         let mut expr = self.prefix()?;
 
         while precedence <= self.current.kind.into() {
@@ -297,7 +331,7 @@ impl<'src> Parser<'src> {
         Ok(expr)
     }
 
-    fn infix(&mut self, left: Expression<'src>) -> Result<Expression<'src>> {
+    fn infix(&mut self, left: Spanned<Expression<'src>>) -> Result<Spanned<Expression<'src>>> {
         self.advance()?;
         match self.previous.kind {
             TokenKind::Eq => self.assignment(left),
@@ -312,77 +346,84 @@ impl<'src> Parser<'src> {
             | TokenKind::Minus => self.binary(left),
             TokenKind::LeftParen => self.call(left),
             _ => Err(SyntaxError::UnexpectedToken {
-                span: self.current.into(),
+                span: self.current.span,
                 context: "expected operator or end of expression".into(),
             }
             .into()),
         }
     }
 
-    fn assignment(&mut self, left: Expression<'src>) -> Result<Expression<'src>> {
-        match left {
+    fn assignment(&mut self, left: Spanned<Expression<'src>>) -> Result<Spanned<Expression<'src>>> {
+        match left.node {
             Expression::Identifier(target) => {
                 let right = self.parse_precedence(Precedence::Assignment)?;
-                Ok(Expression::Assign {
-                    target,
-                    value: Box::new(right),
-                })
+                let span = Self::combine_spans(left.span, right.span);
+                Ok(Spanned::new(
+                    Expression::Assign {
+                        target,
+                        value: Box::new(right),
+                    },
+                    span,
+                ))
             }
-            _ => Err(SyntaxError::InvalidAssignmentTarget {
-                span: self.previous.into(),
-            }
-            .into()),
+            _ => Err(SyntaxError::InvalidAssignmentTarget { span: left.span }.into()),
         }
     }
 
-    fn logical(&mut self, left: Expression<'src>) -> Result<Expression<'src>> {
+    fn logical(&mut self, left: Spanned<Expression<'src>>) -> Result<Spanned<Expression<'src>>> {
         let op = self.previous.kind;
         let right = self.parse_precedence(Precedence::from(op).next())?;
-        Ok(Expression::Logical {
-            left: Box::new(left),
-            op: match op {
-                TokenKind::Or => LogicalOp::Or,
-                TokenKind::And => LogicalOp::And,
-                _ => unreachable!(),
+        let span = Self::combine_spans(left.span, right.span);
+        Ok(Spanned::new(
+            Expression::Logical {
+                left: Box::new(left),
+                op: match op {
+                    TokenKind::Or => LogicalOp::Or,
+                    TokenKind::And => LogicalOp::And,
+                    _ => unreachable!(),
+                },
+                right: Box::new(right),
             },
-            right: Box::new(right),
-        })
+            span,
+        ))
     }
 
-    fn binary(&mut self, left: Expression<'src>) -> Result<Expression<'src>> {
+    fn binary(&mut self, left: Spanned<Expression<'src>>) -> Result<Spanned<Expression<'src>>> {
         let op = self.previous.kind;
         let right = self.parse_precedence(Precedence::from(op).next())?;
-        Ok(Expression::Binary {
-            left: Box::new(left),
-            op: match op {
-                TokenKind::EqEq => BinaryOp::Equal,
-                TokenKind::BangEq => BinaryOp::NotEqual,
-                TokenKind::Less => BinaryOp::LessThan,
-                TokenKind::LessEq => BinaryOp::LessEqual,
-                TokenKind::Greater => BinaryOp::GreaterThan,
-                TokenKind::GreaterEq => BinaryOp::GreaterEqual,
-                TokenKind::Plus => BinaryOp::Add,
-                TokenKind::Minus => BinaryOp::Subtract,
-                _ => unreachable!(),
+        let span = Self::combine_spans(left.span, right.span);
+        Ok(Spanned::new(
+            Expression::Binary {
+                left: Box::new(left),
+                op: match op {
+                    TokenKind::EqEq => BinaryOp::Equal,
+                    TokenKind::BangEq => BinaryOp::NotEqual,
+                    TokenKind::Less => BinaryOp::LessThan,
+                    TokenKind::LessEq => BinaryOp::LessEqual,
+                    TokenKind::Greater => BinaryOp::GreaterThan,
+                    TokenKind::GreaterEq => BinaryOp::GreaterEqual,
+                    TokenKind::Plus => BinaryOp::Add,
+                    TokenKind::Minus => BinaryOp::Subtract,
+                    _ => unreachable!(),
+                },
+                right: Box::new(right),
             },
-            right: Box::new(right),
-        })
+            span,
+        ))
     }
 
-    fn call(&mut self, left: Expression<'src>) -> Result<Expression<'src>> {
-        match left {
+    fn call(&mut self, left: Spanned<Expression<'src>>) -> Result<Spanned<Expression<'src>>> {
+        match left.node {
             Expression::Identifier(name) => {
                 let arguments = self.call_arguments()?;
-                Ok(Expression::Call { name, arguments })
+                let span = Self::combine_spans(left.span, self.previous.span);
+                Ok(Spanned::new(Expression::Call { name, arguments }, span))
             }
-            _ => Err(SyntaxError::InvalidCallTarget {
-                span: self.previous.into(),
-            }
-            .into()),
+            _ => Err(SyntaxError::InvalidCallTarget { span: left.span }.into()),
         }
     }
 
-    fn call_arguments(&mut self) -> Result<Vec<Expression<'src>>> {
+    fn call_arguments(&mut self) -> Result<Vec<Spanned<Expression<'src>>>> {
         let mut arguments = vec![];
         if !self.check(TokenKind::RightParen) {
             loop {
@@ -396,7 +437,7 @@ impl<'src> Parser<'src> {
         Ok(arguments)
     }
 
-    fn prefix(&mut self) -> Result<Expression<'src>> {
+    fn prefix(&mut self) -> Result<Spanned<Expression<'src>>> {
         self.advance()?;
         match self.previous.kind {
             TokenKind::Minus | TokenKind::Bang | TokenKind::Star => self.unary(),
@@ -405,53 +446,79 @@ impl<'src> Parser<'src> {
             TokenKind::Ampersand => self.address(),
             TokenKind::LeftParen => self.grouping(),
             _ => Err(SyntaxError::UnexpectedToken {
-                span: self.previous.into(),
+                span: self.previous.span,
                 context: "in expression".into(),
             }
             .into()),
         }
     }
 
-    fn unary(&mut self) -> Result<Expression<'src>> {
+    fn unary(&mut self) -> Result<Spanned<Expression<'src>>> {
+        let start = self.previous.span;
         let op = self.previous.kind;
         let right = self.parse_precedence(Precedence::Unary)?;
-        Ok(Expression::Unary {
-            op: match op {
-                TokenKind::Minus => UnaryOp::Negate,
-                TokenKind::Bang => UnaryOp::Not,
-                TokenKind::Star => UnaryOp::Dereference,
-                _ => unreachable!(),
+        let span = Self::combine_spans(start, right.span);
+        Ok(Spanned::new(
+            Expression::Unary {
+                op: match op {
+                    TokenKind::Minus => UnaryOp::Negate,
+                    TokenKind::Bang => UnaryOp::Not,
+                    TokenKind::Star => UnaryOp::Dereference,
+                    _ => unreachable!(),
+                },
+                right: Box::new(right),
             },
-            operand: Box::new(right),
-        })
+            span,
+        ))
     }
 
-    fn number(&mut self) -> Result<Expression<'src>> {
+    fn number(&mut self) -> Result<Spanned<Expression<'src>>> {
+        let span = self.previous.span;
         self.previous
             .lexeme
             .parse::<isize>()
-            .map(|value| Expression::Integer(value))
-            .map_err(|_| {
-                SyntaxError::InvalidNumber {
-                    span: self.previous.into(),
-                }
-                .into()
-            })
+            .map(|value| Spanned::new(Expression::Integer(value), span))
+            .map_err(|_| SyntaxError::InvalidNumber { span }.into())
     }
 
-    fn identifier(&mut self) -> Result<Expression<'src>> {
-        Ok(Expression::Identifier(self.previous.lexeme))
+    fn identifier(&mut self) -> Result<Spanned<Expression<'src>>> {
+        let span = self.previous.span;
+        Ok(Spanned::new(
+            Expression::Identifier(self.previous.into()),
+            span,
+        ))
     }
 
-    fn address(&mut self) -> Result<Expression<'src>> {
+    fn address(&mut self) -> Result<Spanned<Expression<'src>>> {
+        let start = self.previous.span;
         self.consume(TokenKind::Identifier, "after address operator")?;
-        Ok(Expression::AddressOf(self.previous.lexeme))
+        let span = Self::combine_spans(start, self.previous.span);
+        Ok(Spanned::new(
+            Expression::AddressOf(self.previous.into()),
+            span,
+        ))
     }
 
-    fn grouping(&mut self) -> Result<Expression<'src>> {
+    fn grouping(&mut self) -> Result<Spanned<Expression<'src>>> {
         let expression = self.expression()?;
         self.consume(TokenKind::RightParen, "after grouping")?;
         Ok(expression)
+    }
+
+    fn span_from(&self, start: SourceSpan) -> SourceSpan {
+        let start_offset: usize = start.offset().into();
+        let end_offset: usize = self.previous.span.offset().into();
+        let end_len: usize = self.previous.span.len().into();
+
+        SourceSpan::new(start_offset.into(), end_offset + end_len - start_offset)
+    }
+
+    fn combine_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
+        let left_offset: usize = left.offset().into();
+        let right_offset: usize = right.offset().into();
+        let right_len: usize = right.len().into();
+
+        SourceSpan::new(left_offset.into(), right_offset + right_len - left_offset)
     }
 
     fn advance(&mut self) -> Result<()> {
@@ -479,7 +546,7 @@ impl<'src> Parser<'src> {
         } else {
             Err(SyntaxError::ExpectedToken {
                 expected: kind,
-                span: self.current.into(),
+                span: self.current.span,
                 context: context.into(),
             }
             .into())
@@ -524,12 +591,7 @@ mod tests {
         ];
 
         for source in sources {
-            println!("Parsing: {}", source);
-            let result = parse(source);
-            if let Err(e) = &result {
-                println!("Error: {:?}", e);
-            }
-            assert!(result.is_ok());
+            assert!(parse(source).is_ok());
         }
     }
 
@@ -542,7 +604,6 @@ mod tests {
         ];
 
         for source in sources {
-            println!("Should fail: {}", source);
             assert!(parse(source).is_err());
         }
     }

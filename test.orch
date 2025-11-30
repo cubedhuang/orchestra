@@ -1,5 +1,12 @@
-fn f(a, b) {
-    print(*&a);
+fn fibonacci(n) {
+  if (n <= 1) return 1;
+  else {
+    let a = fibonacci(n - 1);
+    let b = fibonacci(n - 2);
+    return a + b;
+  }
 }
 
-let a = 10;
+fn main() {
+  let a = fibonacci(10);
+}

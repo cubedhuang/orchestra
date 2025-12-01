@@ -4,6 +4,8 @@ use miette::{Diagnostic, SourceSpan};
 use phf::phf_map;
 use thiserror::Error;
 
+use crate::error::Result;
+
 #[derive(Error, Debug, Diagnostic)]
 pub enum LexError {
     #[error("unexpected character '{character}'")]
@@ -17,6 +19,13 @@ pub enum LexError {
     #[error("unterminated string")]
     #[diagnostic(code(lex::unterminated_string))]
     UnterminatedString {
+        #[label("here")]
+        span: SourceSpan,
+    },
+
+    #[error("unterminated comment")]
+    #[diagnostic(code(lex::unterminated_comment))]
+    UnterminatedComment {
         #[label("here")]
         span: SourceSpan,
     },
@@ -162,7 +171,7 @@ pub struct Lexer<'src> {
 }
 
 impl<'src> Iterator for Lexer<'src> {
-    type Item = Result<Token<'src>, LexError>;
+    type Item = Result<Token<'src>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {
@@ -184,8 +193,8 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    pub fn scan_token(&mut self) -> Result<Token<'src>, LexError> {
-        self.skip_whitespace();
+    pub fn scan_token(&mut self) -> Result<Token<'src>> {
+        self.skip_whitespace()?;
         self.start = self.current;
 
         if self.is_at_end() {
@@ -256,7 +265,8 @@ impl<'src> Lexer<'src> {
             _ => Err(LexError::UnexpectedCharacter {
                 character: c,
                 span: SourceSpan::new(self.start.into(), 1),
-            }),
+            }
+            .into()),
         }
     }
 
@@ -297,7 +307,7 @@ impl<'src> Lexer<'src> {
         iter.next().unwrap_or('\0')
     }
 
-    fn skip_whitespace(&mut self) {
+    fn skip_whitespace(&mut self) -> Result<()> {
         loop {
             match self.peek() {
                 ' ' | '\r' | '\t' | '\n' => {
@@ -308,31 +318,61 @@ impl<'src> Lexer<'src> {
                         while self.peek() != '\n' && !self.is_at_end() {
                             self.advance();
                         }
+                    } else if self.peek_next() == '*' {
+                        self.advance();
+                        self.advance();
+                        self.skip_multiline_comment(self.current - 2)?;
                     } else {
-                        return;
+                        return Ok(());
                     }
                 }
-                _ => return,
+                _ => return Ok(()),
             }
         }
     }
 
-    fn string(&mut self) -> Result<Token<'src>, LexError> {
+    fn skip_multiline_comment(&mut self, start: usize) -> Result<()> {
+        let mut depth = 1;
+        while depth > 0 && !self.is_at_end() {
+            if self.peek() == '/' && self.peek_next() == '*' {
+                self.advance();
+                self.advance();
+                depth += 1;
+            } else if self.peek() == '*' && self.peek_next() == '/' {
+                self.advance();
+                self.advance();
+                depth -= 1;
+            } else {
+                self.advance();
+            }
+        }
+        if depth != 0 {
+            Err(LexError::UnterminatedComment {
+                span: SourceSpan::new(start.into(), self.current - start),
+            }
+            .into())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn string(&mut self) -> Result<Token<'src>> {
         while self.peek() != '"' && !self.is_at_end() {
             self.advance();
         }
 
         if self.is_at_end() {
             Err(LexError::UnterminatedString {
-                span: SourceSpan::new((self.current - 1).into(), 0),
-            })
+                span: SourceSpan::new(self.start.into(), self.current - self.start),
+            }
+            .into())
         } else {
             self.advance();
             Ok(self.make_token(TokenKind::String))
         }
     }
 
-    fn number(&mut self) -> Result<Token<'src>, LexError> {
+    fn number(&mut self) -> Result<Token<'src>> {
         // parse extra so that they can be correctly discarded later
         while self.peek().is_ascii_alphanumeric() {
             self.advance();
@@ -341,7 +381,7 @@ impl<'src> Lexer<'src> {
         Ok(self.make_token(TokenKind::Number))
     }
 
-    fn identifier(&mut self) -> Result<Token<'src>, LexError> {
+    fn identifier(&mut self) -> Result<Token<'src>> {
         while self.peek().is_ascii_alphanumeric() {
             self.advance();
         }

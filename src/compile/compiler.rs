@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
     ast::{
@@ -19,18 +19,18 @@ enum IdentifierKind {
 
 #[derive(Default)]
 struct FunctionCompiler {
-    name: String,
-    parameters: Vec<String>,
+    name: Rc<str>,
+    parameters: Vec<Rc<str>>,
     max_locals: usize,
     code: Vec<Op>,
 
-    scopes: Vec<BTreeMap<String, usize>>,
+    scopes: Vec<BTreeMap<Rc<str>, usize>>,
     current_locals: usize,
     next_label: usize,
 }
 
 impl FunctionCompiler {
-    fn new(name: String, parameters: Vec<String>) -> Self {
+    fn new(name: Rc<str>, parameters: Vec<Rc<str>>) -> Self {
         let mut param_map = BTreeMap::new();
         for (i, param) in parameters.iter().enumerate() {
             param_map.insert(param.clone(), i);
@@ -49,7 +49,7 @@ impl FunctionCompiler {
 
     fn end(self) -> Function {
         Function {
-            name: self.name,
+            name: (*self.name).into(),
             arity: self.parameters.len(),
             locals: self.max_locals,
             code: self.code,
@@ -72,7 +72,7 @@ impl FunctionCompiler {
         self.scopes
             .last_mut()
             .unwrap()
-            .insert(name.to_string(), slot);
+            .insert(name.name.into(), slot);
         Ok(slot)
     }
 
@@ -94,7 +94,7 @@ impl FunctionCompiler {
 
 pub struct Compiler {
     globals: Vec<isize>,
-    global_map: BTreeMap<String, usize>,
+    global_map: BTreeMap<Rc<str>, usize>,
     functions: BTreeMap<String, Function>,
     current_function: FunctionCompiler,
 }
@@ -113,11 +113,11 @@ impl Compiler {
         for global_declaration in &program.0 {
             match &global_declaration.node {
                 GlobalDeclaration::Variable { name: ident, value } => {
-                    let name = ident.name.to_string();
+                    let name = ident.name;
 
-                    if self.global_map.contains_key(&name) || self.functions.contains_key(&name) {
+                    if self.global_map.contains_key(name) || self.functions.contains_key(name) {
                         return Err(CompileError::DuplicateIdentifier {
-                            identifier: name,
+                            identifier: name.into(),
                             span: ident.span,
                         }
                         .into());
@@ -125,27 +125,27 @@ impl Compiler {
 
                     let index = self.globals.len();
                     self.globals.push(value.unwrap_or(0));
-                    self.global_map.insert(name, index);
+                    self.global_map.insert(name.into(), index);
                 }
                 GlobalDeclaration::Function {
                     name: ident,
                     arguments,
                     ..
                 } => {
-                    let name = ident.name.to_string();
+                    let name = ident.name;
 
-                    if self.global_map.contains_key(&name) || self.functions.contains_key(&name) {
+                    if self.global_map.contains_key(name) || self.functions.contains_key(name) {
                         return Err(CompileError::DuplicateIdentifier {
-                            identifier: name,
+                            identifier: name.into(),
                             span: ident.span,
                         }
                         .into());
                     }
 
                     self.functions.insert(
-                        name.clone(),
+                        ident.name.to_owned(),
                         Function {
-                            name,
+                            name: ident.name.to_owned(),
                             arity: arguments.len(),
                             code: vec![],
                             locals: 0,
@@ -189,13 +189,13 @@ impl Compiler {
         arguments: &[Identifier],
         body: &Block,
     ) -> Result<()> {
-        let params: Vec<String> = arguments.iter().map(|id| id.name.to_string()).collect();
-        self.current_function = FunctionCompiler::new(name.name.to_string(), params);
+        let params: Vec<Rc<str>> = arguments.iter().map(|id| id.name.into()).collect();
+        self.current_function = FunctionCompiler::new(name.name.into(), params);
 
         self.block(body)?;
 
         let function = std::mem::take(&mut self.current_function).end();
-        self.functions.insert(name.name.to_string(), function);
+        self.functions.insert(name.name.into(), function);
         Ok(())
     }
 

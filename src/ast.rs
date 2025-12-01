@@ -10,7 +10,7 @@ fn indent(s: &str) -> String {
     s.lines()
         .map(|line| {
             if line.is_empty() {
-                line.to_string()
+                line.to_owned()
             } else {
                 format!("{prefix}{line}")
             }

@@ -426,7 +426,10 @@ impl Compiler {
                     for argument in arguments.iter().rev() {
                         self.expression(&argument.node)?;
                     }
-                    self.emit(Op::Call(name.name.into()));
+                    self.emit(Op::Call {
+                        function: name.name.into(),
+                        arity: arguments.len(),
+                    });
                     Ok(())
                 }
                 _ => Err(CompileError::InvalidFunction {

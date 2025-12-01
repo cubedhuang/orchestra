@@ -306,8 +306,13 @@ impl LC3Backend {
                 self.writeln(&format!("  BRnp fn_{}_label_{id}", function.name));
             }
 
-            Op::Call(name) => {
-                self.writeln(&format!("  JSR fn_{name}"));
+            Op::Call { function, arity } => {
+                self.writeln(&format!("  JSR fn_{function}"));
+                if *arity > 0 {
+                    self.pop("R0");
+                    self.emit_add_immediate("R6", "R6", *arity as isize);
+                    self.push("R0");
+                }
             }
 
             Op::Return => {

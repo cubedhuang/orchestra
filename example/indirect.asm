@@ -1,0 +1,110 @@
+.orig x3000
+  LEA R4, globals
+  LD R6, stack_base
+  ADD R5, R6, #0
+  JSR fn_main
+  HALT
+stack_base  .fill xF000
+globals
+  .fill 0
+fn_addFive
+  ADD R6, R6, #-1
+  ADD R6, R6, #-1
+  STR R7, R6, #0
+  ADD R6, R6, #-1
+  STR R5, R6, #0
+  ADD R5, R6, #-1
+  ADD R6, R6, #-1
+  ;; GetParameter(0)
+  LDR R0, R5, #4
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; GetParameter(0)
+  LDR R0, R5, #4
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Dereference
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  LDR R0, R0, #0
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Push(5)
+  AND R0, R0, #0
+  ADD R0, R0, #5
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Add
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R0, R0, R1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; StoreIndirect
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  STR R1, R0, #0
+  ADD R6, R6, #-1
+  STR R1, R6, #0
+  ;; Pop
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+fn_addFive_teardown
+  ADD R6, R5, #1
+  LDR R5, R6, #0
+  ADD R6, R6, #1
+  LDR R7, R6, #0
+  ADD R6, R6, #1
+  RET
+fn_main
+  ADD R6, R6, #-1
+  ADD R6, R6, #-1
+  STR R7, R6, #0
+  ADD R6, R6, #-1
+  STR R5, R6, #0
+  ADD R5, R6, #-1
+  ADD R6, R6, #-1
+  ;; Push(5)
+  AND R0, R0, #0
+  ADD R0, R0, #5
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; SetLocal(0)
+  LDR R0, R6, #0
+  STR R0, R5, #0
+  ;; GetLocalAddress(0)
+  ADD R0, R5, #0
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Call(addFive [1])
+  JSR fn_addFive
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Pop
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ;; GetLocal(0)
+  LDR R0, R5, #0
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; SetGlobal(0)
+  LDR R0, R6, #0
+  STR R0, R4, #0
+  ;; Pop
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+fn_main_teardown
+  ADD R6, R5, #1
+  LDR R5, R6, #0
+  ADD R6, R6, #1
+  LDR R7, R6, #0
+  ADD R6, R6, #1
+  RET
+.end

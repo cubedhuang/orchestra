@@ -42,7 +42,7 @@ pub enum Op {
     JumpIfNotZero(usize),
 
     // functions
-    Call(String),
+    Call { function: String, arity: usize },
     Return,
 }
 
@@ -81,7 +81,7 @@ impl Display for Op {
             Op::Jump(index) => write!(f, "Jump({index})"),
             Op::JumpIfZero(index) => write!(f, "JumpIfZero({index})"),
             Op::JumpIfNotZero(index) => write!(f, "JumpIfNotZero({index})"),
-            Op::Call(value) => write!(f, "Call({value})"),
+            Op::Call { function, arity } => write!(f, "Call({function} [{arity}])"),
             Op::Return => write!(f, "Return"),
         }
     }

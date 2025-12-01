@@ -37,3 +37,36 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use lc3_ensemble::{asm::assemble, ast::Reg, parse::parse_ast, sim::Simulator};
+
+    use super::*;
+
+    #[test]
+    fn main() {
+        let source = "
+            fn main() {
+                return fib(10);
+            }
+
+            fn fib(n) {
+                if (n <= 1) {
+                    return n;
+                } else {
+                    return fib(n - 1) + fib(n - 2);
+                }
+            }
+        ";
+        let ir = compile::compile(&source).unwrap();
+        let assembly = generate_lc3(&ir);
+        let ast = parse_ast(&assembly).unwrap();
+        let obj_file = assemble(ast).unwrap();
+        let mut sim = Simulator::new(Default::default());
+        sim.load_obj_file(&obj_file).unwrap();
+        sim.run().unwrap();
+
+        assert_eq!(sim.mem[sim.reg_file[Reg::R6].get()].get(), 55);
+    }
+}

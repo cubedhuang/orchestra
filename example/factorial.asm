@@ -64,8 +64,13 @@ fn_factorial_comp_end_1
   LDR R0, R5, #0
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(times)
+  ;; Call(times [2])
   JSR fn_times
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #2
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; SetLocal(0)
   LDR R0, R6, #0
   STR R0, R5, #0
@@ -133,8 +138,13 @@ fn_main
   ADD R0, R0, #5
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(factorial)
+  ;; Call(factorial [1])
   JSR fn_factorial
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; SetGlobal(0)
   LDR R0, R6, #0
   STR R0, R4, #0

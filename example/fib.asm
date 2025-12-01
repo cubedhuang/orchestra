@@ -19,8 +19,9 @@ fn_fib
   LDR R0, R5, #4
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Push(0)
+  ;; Push(1)
   AND R0, R0, #0
+  ADD R0, R0, #1
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; LessEqual
@@ -81,8 +82,13 @@ fn_fib_label_0
   ADD R0, R0, R1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(fib)
+  ;; Call(fib [1])
   JSR fn_fib
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; GetParameter(0)
   LDR R0, R5, #4
   ADD R6, R6, #-1
@@ -102,8 +108,13 @@ fn_fib_label_0
   ADD R0, R0, R1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(fib)
+  ;; Call(fib [1])
   JSR fn_fib
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Add
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -139,8 +150,13 @@ fn_main
   ADD R0, R0, #10
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(fib)
+  ;; Call(fib [1])
   JSR fn_fib
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; SetGlobal(0)
   LDR R0, R6, #0
   STR R0, R4, #0

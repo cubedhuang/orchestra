@@ -20,8 +20,13 @@ fn_main
   LDR R0, R4, #1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -37,8 +42,13 @@ fn_main
   LDR R0, R5, #0
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -54,8 +64,13 @@ fn_main
   LDR R0, R5, #-1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -63,8 +78,13 @@ fn_main
   LDR R0, R5, #0
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -80,8 +100,13 @@ fn_main
   LDR R0, R5, #-1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -89,8 +114,13 @@ fn_main
   LDR R0, R5, #0
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
@@ -98,8 +128,13 @@ fn_main
   LDR R0, R4, #1
   ADD R6, R6, #-1
   STR R0, R6, #0
-  ;; Call(push)
+  ;; Call(push [1])
   JSR fn_push
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1

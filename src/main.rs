@@ -44,8 +44,37 @@ mod tests {
 
     use super::*;
 
+    fn run_simulator(source: &str) -> Simulator {
+        let ir = compile::compile(&source).expect("compilation error");
+        let assembly = generate_lc3(&ir);
+
+        let ast = parse_ast(&assembly).expect("failed to parse generated assembly");
+        let obj_file = assemble(ast).expect("failed to assemble object file");
+
+        let mut sim = Simulator::new(Default::default());
+        sim.load_obj_file(&obj_file)
+            .expect("failed to load object file");
+        sim.run_with_limit(10000)
+            .expect("program took too long to finish");
+        assert_eq!(
+            sim.reg_file[Reg::R6].get(),
+            0xEFFF,
+            "expected stack to point to main return value"
+        );
+        sim
+    }
+
+    fn run_get_return(source: &str) -> u16 {
+        let sim = run_simulator(source);
+        sim.mem[sim.reg_file[Reg::R6].get()].get()
+    }
+
+    fn read_memory_range(sim: &Simulator, start: u16, len: u16) -> Vec<u16> {
+        (start..start + len).map(|i| sim.mem[i].get()).collect()
+    }
+
     #[test]
-    fn main() {
+    fn fib() {
         let source = "
             fn main() {
                 return fib(10);
@@ -59,14 +88,44 @@ mod tests {
                 }
             }
         ";
-        let ir = compile::compile(&source).unwrap();
-        let assembly = generate_lc3(&ir);
-        let ast = parse_ast(&assembly).unwrap();
-        let obj_file = assemble(ast).unwrap();
-        let mut sim = Simulator::new(Default::default());
-        sim.load_obj_file(&obj_file).unwrap();
-        sim.run().unwrap();
+        let value = run_get_return(source);
+        assert_eq!(value, 55);
+    }
 
-        assert_eq!(sim.mem[sim.reg_file[Reg::R6].get()].get(), 55);
+    #[test]
+    fn shadowing() {
+        let source = "
+            let array = 0x4000;
+            let x = 1;
+
+            fn main() {
+                {
+                    push(x);
+                    let x = 2;
+                    push(x);
+                    {
+                        let x = x + 1; // = 3
+                        push(x);
+                    }
+                    {
+                        push(x);
+                        let x = 4;
+                        push(x);
+                    }
+                    push(x);
+                }
+                push(x);
+            }
+
+            fn push(value) {
+                array @= value;
+                array = array + 1;
+            }
+        ";
+        let sim = run_simulator(source);
+        assert_eq!(
+            read_memory_range(&sim, 0x4000, 7),
+            vec![1, 2, 3, 2, 4, 2, 1]
+        );
     }
 }

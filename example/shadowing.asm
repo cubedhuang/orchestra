@@ -52,9 +52,21 @@ fn_main
   ;; Pop
   ADD R6, R6, #1
   LDR R0, R6, #-1
-  ;; Push(3)
+  ;; GetLocal(0)
+  LDR R0, R5, #0
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Push(1)
   AND R0, R0, #0
-  ADD R0, R0, #3
+  ADD R0, R0, #1
+  ADD R6, R6, #-1
+  STR R0, R6, #0
+  ;; Add
+  ADD R6, R6, #1
+  LDR R0, R6, #-1
+  ADD R6, R6, #1
+  LDR R1, R6, #-1
+  ADD R0, R0, R1
   ADD R6, R6, #-1
   STR R0, R6, #0
   ;; SetLocal(1)

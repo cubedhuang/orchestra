@@ -99,4 +99,6 @@ value :
     | '0x'<hex literal>
     | '0o'<octal literal>
     | '0b'<binary literal>
+
+identifier : [_a-zA-Z][_a-zA-Z0-9]*
 ```
